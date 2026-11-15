@@ -6,25 +6,35 @@ S1s is a client modification based on [s1-mod][s1mod-link] to play Advanced Warf
 
 ## Features
 
+- Only compatible with the latest Steam version.
+
 - Independent weapon and world FOV up to 120.
 - Bots join the lobby like real players.
 - Change the game mode, options, map and team in the public lobby.
 - Lobby bots with random outfits and weapons.
-- Random map option in the vote picks a map different from the two proposed.
 - Supply drops and store enabled, with CoD Points earned by playing matches.
 - Duplicate supply drop items are converted into CoD Points.
-- Sten and Lever Action variants included in supply drops.
 - Sound menu option to mute medal sounds during matches.
 - Permanent double XP for player and weapons.
 - Offline only.
-- Compatible with the latest Steam version.
+
+## Installation
+
+Required files:
+```
+├── s1_s_mp.exe
+└── data/
+    └── (useful files)
+```
+
+Move all files to your Call of Duty®: Advanced Warfare® game folder.
 
 ## Build
 
 - Install [Visual Studio 2022][vs-link] and enable `Desktop development with C++`
 - Clone this repository using [Git][git-link]
 - Run `generate.bat` (updates the submodules and generates the solution with Premake)
-- Build the project via the solution file in `build\s1-mod.sln`, or run `build.ps1` to build Release x64 from the command line
+- Build the project via the solution file in `build\s1s.sln`, or run `build.ps1` to build Release x64 from the command line
 
 The output executable is `s1_s_mp.exe`. Only x64 is supported.
 
