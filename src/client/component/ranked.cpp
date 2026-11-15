@@ -35,10 +35,10 @@ namespace ranked
 			}
 
 			// Always run bots, even if xblive_privatematch is 0
-			utils::hook::set(0x14013A0C0, 0xC301B0); // BG_BotSystemEnabled
-			utils::hook::set(0x140139A60, 0xC301B0); // BG_AISystemEnabled
-			utils::hook::set(0x14013A080, 0xC301B0); // BG_BotFastFileEnabled
-			utils::hook::set(0x14013A200, 0xC301B0); // BG_BotsUsingTeamDifficulty
+			utils::hook::set(0x140194FC0, 0xC301B0); // BG_BotSystemEnabled
+			utils::hook::set(0x1401948D0, 0xC301B0); // BG_AISystemEnabled
+			utils::hook::set(0x140194F40, 0xC301B0); // BG_BotFastFileEnabled
+			utils::hook::set(0x140195100, 0xC301B0); // BG_BotsUsingTeamDifficulty
 		}
 	};
 }

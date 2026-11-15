@@ -85,7 +85,7 @@ namespace notifies
 			}
 
 			// ClientCommand
-			utils::hook::invoke<void>(0x1402E98F0, client_num);
+			utils::hook::invoke<void>(0x140343C00, client_num);
 		}
 
 		unsigned int local_id_to_entity(unsigned int local_id)
@@ -137,7 +137,7 @@ namespace notifies
 			a.lea(eax, dword_ptr(r15, -0x17));
 			a.mov(dword_ptr(rbp, 0x68), r15d);
 
-			a.jmp(0x1403FA143);
+			a.jmp(0x1404578EF);
 
 			a.bind(replace);
 
@@ -190,9 +190,9 @@ namespace notifies
 				return;
 			}
 
-			utils::hook::call(0x14043A9AD, client_command_stub);
+			if (game::port_pending) utils::hook::call(0x14043A9AD, client_command_stub);
 
-			utils::hook::jump(0x1403FA134, utils::hook::assemble(vm_execute_stub), true);
+			if (game::port_pending) utils::hook::jump(0x1403FA134, utils::hook::assemble(vm_execute_stub), true);
 
 			scripting::on_shutdown([](bool free_scripts)
 			{

@@ -55,11 +55,11 @@ namespace network
 			// Command handled
 			a.popad64();
 			a.mov(al, 1);
-			a.jmp(0x14020AA10);
+			a.jmp(0x1402663A8);
 
 			a.bind(return_unhandled);
 			a.popad64();
-			a.jmp(0x14020A19A);
+			a.jmp(0x1402658FE);
 		}
 
 		int net_compare_base_address(const game::netadr_s* a1, const game::netadr_s* a2)
@@ -195,52 +195,53 @@ namespace network
 
 				// redirect dw_sendto to raw socket
 				//utils::hook::jump(0x1404D850A, reinterpret_cast<void*>(0x1404D849A));
-				utils::hook::call(0x1404D851F, dw_send_to_stub);
+				if (game::port_pending) utils::hook::call(0x1404D851F, dw_send_to_stub);
 				utils::hook::jump(game::Sys_SendPacket, dw_send_to_stub);
 
 				// intercept command handling
-				utils::hook::jump(0x14020A175, utils::hook::assemble(handle_command_stub), true);
+				if (game::port_pending) utils::hook::jump(0x14020A175, utils::hook::assemble(handle_command_stub), true);
 
 				// handle xuid without secure connection
-				utils::hook::nop(0x14043FFF8, 6);
+				if (game::port_pending) utils::hook::nop(0x14043FFF8, 6);
 
-				utils::hook::jump(0x1403DA700, net_compare_address);
-				utils::hook::jump(0x1403DA750, net_compare_base_address);
+				utils::hook::jump(0x140437CF0, net_compare_address);
+				utils::hook::jump(0x140437D40, net_compare_base_address);
 
 				// don't establish secure conenction
-				utils::hook::set<uint8_t>(0x140232BBD, 0xEB);
-				utils::hook::set<uint8_t>(0x140232C9A, 0xEB);
-				utils::hook::set<uint8_t>(0x140232F8D, 0xEB);
-				utils::hook::set<uint8_t>(0x14020862F, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140232BBD, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140232C9A, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140232F8D, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x14020862F, 0xEB);
 
 				// ignore unregistered connection
-				utils::hook::jump(0x140439EA9, reinterpret_cast<void*>(0x140439E28));
-				utils::hook::set<uint8_t>(0x140439E9E, 0xEB);
+				if (game::port_pending) utils::hook::jump(0x140439EA9, reinterpret_cast<void*>(0x1404975A9));
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140439E9E, 0xEB);
 
 				// disable xuid verification
-				utils::hook::set<uint8_t>(0x140022319, 0xEB);
-				utils::hook::set<uint8_t>(0x140022334, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140022319, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140022334, 0xEB);
 
 				// disable xuid verification
-				utils::hook::nop(0x14043CC4C, 2);
-				utils::hook::set<uint8_t>(0x14043CCA8, 0xEB);
+				if (game::port_pending) utils::hook::nop(0x14043CC4C, 2);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x14043CCA8, 0xEB);
 
 				// ignore configstring mismatch
-				utils::hook::set<uint8_t>(0x140211610, 0xEB);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140211610, 0xEB);
 
 				// ignore dw handle in SV_PacketEvent
-				utils::hook::set<uint8_t>(0x140442F6D, 0xEB);
-				utils::hook::call(0x140442F61, &net_compare_address);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x140442F6D, 0xEB);
+				utils::hook::call(0x1404A0D18, &net_compare_address);
 
 				// ignore dw handle in SV_FindClientByAddress
-				utils::hook::set<uint8_t>(0x14044256D, 0xEB);
-				utils::hook::call(0x140442561, &net_compare_address);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x14044256D, 0xEB);
+				utils::hook::call(0x1404A0191, &net_compare_address);
 
 				// ignore dw handle in SV_DirectConnect
-				utils::hook::set<uint8_t>(0x140439BA8, 0xEB);
-				utils::hook::set<uint8_t>(0x140439DA5, 0xEB);
-				utils::hook::call(0x140439B9B, &net_compare_address);
-				utils::hook::call(0x140439D98, &net_compare_address);
+				utils::hook::set<uint8_t>(0x140497318, 0xEB);
+				utils::hook::set<uint8_t>(0x140497531, 0x90);
+				utils::hook::set<uint8_t>(0x140497532, 0xE9);
+				utils::hook::call(0x14049730B, &net_compare_address);
+				utils::hook::call(0x140497524, &net_compare_address);
 
 				// increase cl_maxpackets
 				dvars::override::register_int("cl_maxpackets", 1000, 1, 1000, game::DVAR_FLAG_SAVED);
@@ -249,32 +250,32 @@ namespace network
 				dvars::override::register_int("sv_remote_client_snapshot_msec", 33, 33, 100, game::DVAR_FLAG_NONE);
 
 				// ignore impure client
-				utils::hook::jump(0x14043AC0D, reinterpret_cast<void*>(0x14043ACA3));
+				if (game::port_pending) utils::hook::jump(0x14043AC0D, reinterpret_cast<void*>(0x1404981CF));
 
 				// don't send checksum
-				utils::hook::set<uint8_t>(0x1404D84C0, 0);
-				utils::hook::set<uint8_t>(0x1404D8519, 0);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x1404D84C0, 0);
+				if (game::port_pending) utils::hook::set<uint8_t>(0x1404D8519, 0);
 
 				// don't read checksum
-				utils::hook::jump(0x1404D842B, 0x1404D8453);
+				if (game::port_pending) utils::hook::jump(0x1404D842B, 0x14053B803);
 
 				// don't try to reconnect client
-				utils::hook::call(0x140439D4D, reconnect_migratated_client);
-				utils::hook::nop(0x140439D28, 4); // this crashes when reconnecting for some reason
+				if (game::port_pending) utils::hook::call(0x140439D4D, reconnect_migratated_client);
+				if (game::port_pending) utils::hook::nop(0x140439D28, 4); // this crashes when reconnecting for some reason
 
 				// allow server owner to modify net_port before the socket bind
-				utils::hook::call(0x1404D7A3D, register_netport_stub);
-				utils::hook::call(0x1404D7E28, register_netport_stub);
+				if (game::port_pending) utils::hook::call(0x1404D7A3D, register_netport_stub);
+				if (game::port_pending) utils::hook::call(0x1404D7E28, register_netport_stub);
 
 				// increase allowed packet size
 				const auto max_packet_size = 0x20000;
-				utils::hook::set<int>(0x1403DADE6, max_packet_size);
-				utils::hook::set<int>(0x1403DAE20, max_packet_size);
-				utils::hook::set<int>(0x1403DAD14, max_packet_size);
-				utils::hook::set<int>(0x1403DAD35, max_packet_size);
+				if (game::port_pending) utils::hook::set<int>(0x1403DADE6, max_packet_size);
+				if (game::port_pending) utils::hook::set<int>(0x1403DAE20, max_packet_size);
+				if (game::port_pending) utils::hook::set<int>(0x1403DAD14, max_packet_size);
+				if (game::port_pending) utils::hook::set<int>(0x1403DAD35, max_packet_size);
 
 				// ignore built in "print" oob command and add in our own
-				utils::hook::set<std::uint8_t>(0x14020A723, 0xEB);
+				if (game::port_pending) utils::hook::set<std::uint8_t>(0x14020A723, 0xEB);
 				on("print", [](const game::netadr_s&, const std::string& data)
 				{
 					console::info("%s", data.data());

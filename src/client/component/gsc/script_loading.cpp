@@ -183,9 +183,9 @@ namespace gsc
 			}
 		}
 
-		void load_scripts(const std::filesystem::path& root_dir)
+		void load_scripts(const std::filesystem::path& root_dir, const std::string& folder = "scripts")
 		{
-			const std::filesystem::path script_dir = root_dir / "scripts";
+			const std::filesystem::path script_dir = root_dir / folder;
 			if (!utils::io::directory_exists(script_dir.generic_string()))
 			{
 				return;
@@ -219,10 +219,18 @@ namespace gsc
 
 		void gscr_post_load_scripts_stub()
 		{
-			utils::hook::invoke<void>(0x140323F20);
+			utils::hook::invoke<void>(0x14037E830);
 
 			if (game::VirtualLobby_Loaded())
 			{
+				main_handles.clear();
+				init_handles.clear();
+
+				for (const auto& path : filesystem::get_search_paths())
+				{
+					load_scripts(path, "scripts/vlobby");
+				}
+
 				return;
 			}
 
@@ -270,17 +278,12 @@ namespace gsc
 				}
 			}
 
-			utils::hook::invoke<void>(0x1403380D0);
+			utils::hook::invoke<void>(0x140392E20);
 		}
 
 		void scr_load_level_stub()
 		{
-			utils::hook::invoke<void>(0x140325B90);
-
-			if (game::VirtualLobby_Loaded())
-			{
-				return;
-			}
+			utils::hook::invoke<void>(0x1403805E0);
 
 			for (auto& function_handle : init_handles)
 			{
@@ -318,7 +321,7 @@ namespace gsc
 				return {{}, script_data};
 			});
 
-			utils::hook::invoke<void>(SELECT_VALUE(0x1403118E0, 0x1403EDE60));
+			utils::hook::invoke<void>(SELECT_VALUE(0x1403118E0, 0x14044B1F0));
 		}
 
 		void scr_end_load_scripts_stub()
@@ -326,7 +329,7 @@ namespace gsc
 			// Cleanup the compiler
 			gsc_ctx->cleanup();
 
-			utils::hook::invoke<void>(SELECT_VALUE(0x140243780, 0x1403EDF90));
+			utils::hook::invoke<void>(SELECT_VALUE(0x140243780, 0x14044B320));
 		}
 	}
 
@@ -359,10 +362,10 @@ namespace gsc
 		void post_unpack() override
 		{
 			// Load our scripts with an uncompressed stack
-			utils::hook::call(SELECT_VALUE(0x14031ABB0, 0x1403F7380), db_get_raw_buffer_stub);
+			utils::hook::call(SELECT_VALUE(0x14031ABB0, 0x140454621), db_get_raw_buffer_stub);
 
-			utils::hook::call(SELECT_VALUE(0x1403309E9, 0x1403309E9), scr_begin_load_scripts_stub); // GScr_LoadScripts
-			utils::hook::call(SELECT_VALUE(0x14023DA84, 0x140330B9C), scr_end_load_scripts_stub); // GScr_LoadScripts
+			utils::hook::call(SELECT_VALUE(0x1403309E9, 0x14038B179), scr_begin_load_scripts_stub); // GScr_LoadScripts
+			utils::hook::call(SELECT_VALUE(0x14023DA84, 0x14038B40F), scr_end_load_scripts_stub); // GScr_LoadScripts
 
 			developer_script = game::Dvar_RegisterBool("developer_script", false, game::DVAR_FLAG_NONE, "Enable developer script comments");
 
@@ -372,15 +375,15 @@ namespace gsc
 			}
 
 			// ProcessScript
-			utils::hook::call(0x1403F7317, find_script);
-			utils::hook::call(0x1403F7327, db_is_x_asset_default);
+			utils::hook::call(0x1404545B7, find_script);
+			utils::hook::call(0x1404545C7, db_is_x_asset_default);
 
 			// GScr_LoadScripts
-			utils::hook::call(0x140330B97, gscr_post_load_scripts_stub);
+			utils::hook::call(0x14038B40A, gscr_post_load_scripts_stub);
 
 			// Exec script handles
-			utils::hook::call(0x1402F71AE, g_load_structs_stub);
-			utils::hook::call(0x1402F71C7, scr_load_level_stub);
+			utils::hook::call(0x140351F2B, g_load_structs_stub);
+			utils::hook::call(0x140351F44, scr_load_level_stub);
 
 			scripting::on_shutdown([](int free_scripts)
 			{

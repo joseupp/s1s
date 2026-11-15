@@ -4,7 +4,11 @@
 
 #include "game/game.hpp"
 
+#include "scheduler.hpp"
+
 #include <utils/hook.hpp>
+#include <utils/io.hpp>
+#include <utils/string.hpp>
 
 namespace dvars
 {
@@ -117,6 +121,20 @@ namespace dvars
 		static std::unordered_map<std::string, int> set_int_overrides;
 		static std::unordered_map<std::string, std::string> set_string_overrides;
 
+		static std::unordered_map<std::string, unsigned int> flags_overrides;
+
+		void set_flags(const std::string& name, const unsigned int flags)
+		{
+			flags_overrides[name] = flags;
+		}
+
+		static std::unordered_map<std::string, float> scale_float_overrides;
+
+		void scale_float(const std::string& name, const float factor)
+		{
+			scale_float_overrides[name] = factor;
+		}
+
 		void register_bool(const std::string& name, const bool value, const unsigned int flags)
 		{
 			dvar_bool values;
@@ -218,6 +236,11 @@ namespace dvars
 			flags = var->flags;
 		}
 
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
+		}
+
 		return dvar_register_bool_hook.invoke<game::dvar_t*>(name, value, flags, description);
 	}
 
@@ -231,6 +254,21 @@ namespace dvars
 			min = var->min;
 			max = var->max;
 			flags = var->flags;
+		}
+
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
+		}
+
+		if (const auto* factor = find_dvar(override::scale_float_overrides, name))
+		{
+			value *= *factor;
+			max *= *factor;
+			if (max < value)
+			{
+				max = value;
+			}
 		}
 
 		return dvar_register_float_hook.invoke<game::dvar_t*>(name, value, min, max, flags, description);
@@ -248,6 +286,11 @@ namespace dvars
 			flags = var->flags;
 		}
 
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
+		}
+
 		return dvar_register_int_hook.invoke<game::dvar_t*>(name, value, min, max, flags, description);
 	}
 
@@ -258,6 +301,11 @@ namespace dvars
 		{
 			value = var->value.data();
 			flags = var->flags;
+		}
+
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
 		}
 
 		return dvar_register_string_hook.invoke<game::dvar_t*>(name, value, flags, description);
@@ -276,6 +324,11 @@ namespace dvars
 			flags = var->flags;
 		}
 
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
+		}
+
 		return dvar_register_vector2_hook.invoke<game::dvar_t*>(name, x, y, min, max, flags, description);
 	}
 
@@ -291,6 +344,11 @@ namespace dvars
 			min = var->min;
 			max = var->max;
 			flags = var->flags;
+		}
+
+		if (const auto* new_flags = find_dvar(override::flags_overrides, name))
+		{
+			flags = *new_flags;
 		}
 
 		return dvar_register_vector3_hook.invoke<game::dvar_t*>(name, x, y, z, min, max, flags, description);
@@ -364,22 +422,103 @@ namespace dvars
 		return dvar_set_string_hook.invoke<void>(dvar, string);
 	}
 
+	namespace
+	{
+		constexpr const char* unlocked_dvars[] =
+		{
+			"gpad_stick_deadzone_max", "gpad_stick_deadzone_min",
+		};
+
+		std::unordered_set<std::string> unlocked{};
+
+		std::optional<std::string> get_saved_value(const std::string& name)
+		{
+			std::string data{};
+			if (!utils::io::read_file("players2/config_mp.cfg", &data))
+			{
+				return {};
+			}
+
+			const auto prefix = "seta " + name + " ";
+			for (auto line : utils::string::split(data, '\n'))
+			{
+				if (!line.empty() && line.back() == '\r')
+				{
+					line.pop_back();
+				}
+
+				if (!line.starts_with(prefix))
+				{
+					continue;
+				}
+
+				auto value = line.substr(prefix.size());
+				if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
+				{
+					value = value.substr(1, value.size() - 2);
+				}
+
+				return value;
+			}
+
+			return {};
+		}
+
+		void unlock_dvars()
+		{
+			if (unlocked.size() == std::size(unlocked_dvars))
+			{
+				return;
+			}
+
+			for (const auto* name : unlocked_dvars)
+			{
+				if (unlocked.contains(name))
+				{
+					continue;
+				}
+
+				auto* dvar = game::Dvar_FindVar(name);
+				if (!dvar)
+				{
+					continue;
+				}
+
+				constexpr auto locked = static_cast<unsigned int>(game::DVAR_FLAG_CHEAT | game::DVAR_FLAG_READ | game::DVAR_FLAG_WRITE);
+				dvar->flags = (dvar->flags & ~locked) | static_cast<unsigned int>(game::DVAR_FLAG_SAVED);
+				unlocked.emplace(name);
+
+				if (const auto value = get_saved_value(name))
+				{
+					game::Dvar_SetFromStringByNameFromSource(name, value->data(), game::DvarSetSource::DVAR_SOURCE_INTERNAL);
+				}
+			}
+		}
+	}
+
 	class component final : public component_interface
 	{
 	public:
 		void post_unpack() override
 		{
-			dvar_register_bool_hook.create(SELECT_VALUE(0x140371850, 0x1404C0BE0), &dvar_register_bool_stub);
-			dvar_register_float_hook.create(SELECT_VALUE(0x140371C20, 0x1404C0FB0), &dvar_register_float_stub);
-			dvar_register_int_hook.create(SELECT_VALUE(0x140371CF0, 0x1404C1080), &dvar_register_int_stub);
-			dvar_register_string_hook.create(SELECT_VALUE(0x140372050, 0x1404C1450), &dvar_register_string_stub);
-			dvar_register_vector2_hook.create(SELECT_VALUE(0x140372120, 0x1404C1520), &dvar_register_vector2_stub);
-			dvar_register_vector3_hook.create(SELECT_VALUE(0x140372230, 0x1404C1600), &dvar_register_vector3_stub);
+			for (const auto* name : unlocked_dvars)
+			{
+				override::set_flags(name, game::DVAR_FLAG_SAVED);
+			}
 
-			dvar_set_bool_hook.create(SELECT_VALUE(0x140372B70, 0x1404C1F30), &dvar_set_bool_stub);
-			dvar_set_float_hook.create(SELECT_VALUE(0x140373420, 0x1404C2A10), &dvar_set_float_stub);
-			dvar_set_int_hook.create(SELECT_VALUE(0x1403738D0, 0x1404C2F40), &dvar_set_int_stub);
-			dvar_set_string_hook.create(SELECT_VALUE(0x140373DE0, 0x1404C3610), &dvar_set_string_stub);
+			scheduler::loop(unlock_dvars, scheduler::pipeline::main, 1s);
+
+			dvar_register_bool_hook.create(SELECT_VALUE(0x140371850, 0x1405234E0), &dvar_register_bool_stub);
+			dvar_register_float_hook.create(SELECT_VALUE(0x140371C20, 0x140523860), &dvar_register_float_stub);
+			dvar_register_int_hook.create(SELECT_VALUE(0x140371CF0, 0x140523970), &dvar_register_int_stub);
+			dvar_register_string_hook.create(SELECT_VALUE(0x140372050, 0x140523D50), &dvar_register_string_stub);
+			dvar_register_vector2_hook.create(SELECT_VALUE(0x140372120, 0x140523E10), &dvar_register_vector2_stub);
+			dvar_register_vector3_hook.create(SELECT_VALUE(0x140372230, 0x140523F10), &dvar_register_vector3_stub);
+
+			dvar_set_bool_hook.create(SELECT_VALUE(0x140372B70, 0x140524800), &dvar_set_bool_stub);
+			dvar_set_float_hook.create(SELECT_VALUE(0x140373420, 0x140524D90), &dvar_set_float_stub);
+			dvar_set_int_hook.create(SELECT_VALUE(0x1403738D0, 0x140525000), &dvar_set_int_stub);
+			dvar_set_string_hook.create(SELECT_VALUE(0x140373DE0, 0x1405254C0), &dvar_set_string_stub);
 		}
 	};
 }

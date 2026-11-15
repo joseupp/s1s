@@ -250,20 +250,20 @@ namespace filesystem
 
 			if (game::environment::is_sp())
 			{
-				utils::hook::call(0x140360A74, fs_startup_stub);
+				if (game::port_pending) utils::hook::call(0x140360A74, fs_startup_stub);
 
-				utils::hook::call(0x140361FE0, register_custom_path_stub);
-				utils::hook::call(0x140362000, register_custom_path_stub);
-				utils::hook::call(0x14036203F, register_custom_path_stub);
+				if (game::port_pending) utils::hook::call(0x140361FE0, register_custom_path_stub);
+				if (game::port_pending) utils::hook::call(0x140362000, register_custom_path_stub);
+				if (game::port_pending) utils::hook::call(0x14036203F, register_custom_path_stub);
 			}
 			else
 			{
-				utils::hook::call(0x1404AE192, fs_startup_stub);
-				utils::hook::call(0x1404AE5C3, fs_startup_stub);
+				utils::hook::call(0x140511183, fs_startup_stub);
+				utils::hook::call(0x140511710, fs_startup_stub);
 
-				utils::hook::call(0x1404AEFD0, register_custom_path_stub);
-				utils::hook::call(0x1404AEFF0, register_custom_path_stub);
-				utils::hook::call(0x1404AF02F, register_custom_path_stub);
+				utils::hook::call(0x1405120C0, register_custom_path_stub);
+				utils::hook::call(0x1405120E0, register_custom_path_stub);
+				utils::hook::call(0x14051211F, register_custom_path_stub);
 			}
 		}
 	};

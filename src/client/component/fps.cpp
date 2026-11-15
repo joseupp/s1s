@@ -162,13 +162,13 @@ namespace fps
 
 			// fps setup
 			cg_perf.perf_start = std::chrono::high_resolution_clock::now();
-			utils::hook::call(SELECT_VALUE(0x140144D41, 0x140213B27), &perf_update);
+			if (game::port_pending) utils::hook::call(SELECT_VALUE(0x140144D41, 0x140213B27), &perf_update);
 
 			// change cg_drawfps flags to saved
-			utils::hook::call(SELECT_VALUE(0x1400EF951, 0x1401A4B8E), &cg_draw_fps_register_stub);
+			if (game::port_pending) utils::hook::call(SELECT_VALUE(0x1400EF951, 0x1401A4B8E), &cg_draw_fps_register_stub);
 
 			// fix ping value
-			utils::hook::nop(0x140213031, 2);
+			if (game::port_pending) utils::hook::nop(0x140213031, 2);
 
 			scheduler::loop(cg_draw_fps, scheduler::pipeline::renderer);
 			if (game::environment::is_mp())

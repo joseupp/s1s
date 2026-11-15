@@ -2,9 +2,12 @@
 #include "loader/component_loader.hpp"
 
 #include <utils/hook.hpp>
+#include <utils/string.hpp>
+#include <utils/io.hpp>
 #include <utils/thread.hpp>
 
 #include "game/game.hpp"
+#include "startup_log.hpp"
 #include "game/demonware/servers/lobby_server.hpp"
 #include "game/demonware/servers/auth3_server.hpp"
 #include "game/demonware/servers/stun_server.hpp"
@@ -150,6 +153,65 @@ namespace demonware
 				host.h_addr_list = reinterpret_cast<char**>(addr_list);
 
 				return &host;
+			}
+
+			struct fake_addrinfo
+			{
+				addrinfo info;
+				sockaddr_in address;
+			};
+
+			std::mutex fake_addrinfo_mutex;
+			std::unordered_set<addrinfo*> fake_addrinfos;
+
+			INT WSAAPI getaddrinfo_stub(const PCSTR name, const PCSTR service, const ADDRINFOA* hints, PADDRINFOA* result)
+			{
+				base_server* server = name ? tcp_servers.find(name) : nullptr;
+				if (!server && name)
+				{
+					server = udp_servers.find(name);
+				}
+
+				startup_log::write(std::format("[DW] getaddrinfo {}:{} -> {}", name ? name : "(null)",
+					service ? service : "(null)", server ? "interno" : "real"));
+
+				if (!server || (hints && hints->ai_family != AF_UNSPEC && hints->ai_family != AF_INET))
+				{
+					return getaddrinfo(name, service, hints, result);
+				}
+
+				auto* entry = new fake_addrinfo{};
+				entry->address.sin_family = AF_INET;
+				entry->address.sin_addr.s_addr = server->get_address();
+				entry->address.sin_port = htons(static_cast<u_short>(service ? atoi(service) : 0));
+
+				entry->info.ai_family = AF_INET;
+				entry->info.ai_socktype = hints ? hints->ai_socktype : 0;
+				entry->info.ai_protocol = hints ? hints->ai_protocol : 0;
+				entry->info.ai_addrlen = sizeof(sockaddr_in);
+				entry->info.ai_addr = reinterpret_cast<sockaddr*>(&entry->address);
+
+				{
+					std::lock_guard _(fake_addrinfo_mutex);
+					fake_addrinfos.insert(&entry->info);
+				}
+
+				*result = &entry->info;
+				return 0;
+			}
+
+			VOID WSAAPI freeaddrinfo_stub(const PADDRINFOA info)
+			{
+				{
+					std::lock_guard _(fake_addrinfo_mutex);
+					if (fake_addrinfos.erase(info))
+					{
+						delete reinterpret_cast<fake_addrinfo*>(info);
+						return;
+					}
+				}
+
+				freeaddrinfo(info);
 			}
 
 			int WINAPI connect_stub(const SOCKET s, const sockaddr* addr, const int len)
@@ -375,6 +437,42 @@ namespace demonware
 			tcp_servers.create<lobby_server>("aw-pc-lobby.prod.demonware.net");
 			tcp_servers.create<umbrella_server>("prod.umbrella.demonware.net");
 		}
+
+		utils::hook::detour bd_task_status_hook;
+
+		bool is_valid_task(const void* task)
+		{
+			const auto address = reinterpret_cast<std::uintptr_t>(task);
+			if (address & 7)
+			{
+				return false;
+			}
+
+			MEMORY_BASIC_INFORMATION info{};
+			if (!VirtualQuery(task, &info, sizeof(info)) || info.State != MEM_COMMIT ||
+				(info.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ |
+					PAGE_EXECUTE_READWRITE)) == 0 || (info.Protect & PAGE_GUARD))
+			{
+				return false;
+			}
+
+			const auto vtable = *reinterpret_cast<const std::uintptr_t*>(task);
+			return (vtable & 7) == 0 && vtable >= 0x140792000 && vtable < 0x1408FE600;
+		}
+
+		int bd_task_status_stub(std::uint8_t* slot)
+		{
+			auto*& task = *reinterpret_cast<void**>(slot + 0x8);
+			if (task && !is_valid_task(task))
+			{
+				printf("[ demonware ]: tarea de LiveStorage inválida (%p, tipo %d), se da por fallida\n", task,
+					*reinterpret_cast<int*>(slot + 0x18));
+				task = nullptr;
+				return 2;
+			}
+
+			return bd_task_status_hook.invoke<int>(slot);
+		}
 	}
 
 	class component final : public component_interface
@@ -400,6 +498,8 @@ namespace demonware
 				if (function == "#19") return io::send_stub;
 				if (function == "#20") return io::sendto_stub;
 				if (function == "#52") return io::gethostbyname_stub;
+				if (function == "getaddrinfo") return io::getaddrinfo_stub;
+				if (function == "freeaddrinfo") return io::freeaddrinfo_stub;
 			}
 
 			if (function == "InternetGetConnectedState")
@@ -412,26 +512,35 @@ namespace demonware
 
 		void post_unpack() override
 		{
-			utils::hook::jump(SELECT_VALUE(0x140575880, 0x1406C0080), bd_logger_stub);
+			utils::hook::jump(SELECT_VALUE(0x140575880, 0x1406F3AA0), bd_logger_stub);
 
 			if (game::environment::is_sp())
 			{
-				utils::hook::set<uint8_t>(0x1405632E0, 0xC3); // bdAuthSteam
-				utils::hook::set<uint8_t>(0x1402DF2C0, 0xC3); // dwNet
+				utils::hook::set<uint8_t>(0x1405C9350, 0xC3); // bdAuthSteam
+				if (game::port_pending) utils::hook::set<uint8_t>(0x1402DF2C0, 0xC3); // dwNet
 				return;
 			}
 
-			utils::hook::set<uint8_t>(0x140698BB2, 0x0); // CURLOPT_SSL_VERIFYPEER
-			utils::hook::set<uint8_t>(0x140698B69, 0xAF); // CURLOPT_SSL_VERIFYHOST
-			utils::hook::set<uint8_t>(0x14088D0E8, 0x0); // HTTPS -> HTTP
+			if (game::port_pending) utils::hook::set<uint8_t>(0x140698BB2, 0x0); // CURLOPT_SSL_VERIFYPEER
+			if (game::port_pending) utils::hook::set<uint8_t>(0x140698B69, 0xAF); // CURLOPT_SSL_VERIFYHOST
+			utils::hook::set<uint8_t>(0x14083D984, 0x0); // HTTPS -> HTTP
 
-			// HTTPS -> HTTP
-			utils::hook::inject(0x14003852E, "http://prod.umbrella.demonware.net/v1.0/");
-			utils::hook::inject(0x14003884F, "http://prod.umbrella.demonware.net/v1.0/");
-			utils::hook::inject(0x140038A07, "http://prod.umbrella.demonware.net/v1.0/");
+			const auto write_string = [](const size_t address, const char* text)
+			{
+				utils::hook::copy(address, text, std::strlen(text) + 1);
+			};
 
-			utils::hook::set<uint8_t>(0x140437CC0, 0xC3); // SV_SendMatchData
-			utils::hook::set<uint8_t>(0x140560D70, 0xC3); // Live_CheckForFullDisconnect
+			write_string(0x140826D90, "http://%s:%d/auth/");
+			write_string(0x140796E80, "http://prod.umbrella.demonware.net/v1.0/");
+			write_string(0x140796EB0, "http://prod.umbrella.demonware.net/v1.0/");
+			write_string(0x140796EE0, "http://prod.umbrella.demonware.net/v1.0/");
+
+			utils::hook::set<uint8_t>(0x140495180, 0xC3); // SV_SendMatchData
+			utils::hook::set<uint8_t>(0x1405C6940, 0xC3); // Live_CheckForFullDisconnect
+
+			bd_task_status_hook.create(0x1405A4BC0, bd_task_status_stub);
+
+			utils::hook::set<std::uint8_t>(0x140423060, 0xC3);
 		}
 
 		void pre_destroy() override

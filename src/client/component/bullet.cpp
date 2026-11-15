@@ -36,7 +36,7 @@ namespace bullet
 			dvars::bg_surfacePenetration = game::Dvar_RegisterFloat("bg_surfacePenetration", 0.0f,
 				0.0f, std::numeric_limits<float>::max(), game::DVAR_FLAG_SAVED,
 				"Set to a value greater than 0 to override the surface penetration depth");
-			bg_get_surface_penetration_depth_hook.create(0x1401641A0, &bg_get_surface_penetration_depth_stub);
+			bg_get_surface_penetration_depth_hook.create(0x1401BE670, &bg_get_surface_penetration_depth_stub);
 		}
 	};
 }

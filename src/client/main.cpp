@@ -3,12 +3,14 @@
 #include "loader/loader.hpp"
 #include "loader/component_loader.hpp"
 #include "game/game.hpp"
+#include "component/startup_log.hpp"
 
 #include <utils/string.hpp>
 #include <utils/flags.hpp>
 #include <utils/io.hpp>
 
 #include <DbgHelp.h>
+#include <intrin.h>
 
 #include <version.hpp>
 
@@ -63,6 +65,8 @@ LONG WINAPI exception_handler(PEXCEPTION_POINTERS exception_info)
 
 [[noreturn]] void WINAPI exit_hook(const int code)
 {
+	startup_log::write(utils::string::va("ExitProcess(%d) desde 0x%llX", code,
+		reinterpret_cast<unsigned long long>(_ReturnAddress())));
 	component_loader::pre_destroy();
 	std::exit(code);
 }
@@ -95,7 +99,7 @@ launcher::mode detect_mode_from_arguments()
 		return launcher::mode::multiplayer;
 	}
 
-	if (utils::flags::has_flag("survival"))
+	if (utils::flags::has_flag("survival") || utils::flags::has_flag("coop"))
 	{
 		return launcher::mode::survival;
 	}
@@ -110,7 +114,7 @@ launcher::mode detect_mode_from_arguments()
 		return launcher::mode::singleplayer;
 	}
 
-	return launcher::mode::none;
+	return launcher::mode::multiplayer;
 }
 
 
@@ -260,13 +264,7 @@ int main()
 
 			if (!component_loader::post_start()) return 0;
 
-			auto mode = detect_mode_from_arguments();
-			if (mode == launcher::mode::none)
-			{
-				const launcher launcher;
-				mode = launcher.run();
-				if (mode == launcher::mode::none) return 0;
-			}
+			const auto mode = detect_mode_from_arguments();
 
 			game::environment::set_mode(mode);
 

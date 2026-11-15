@@ -110,6 +110,11 @@ namespace fastfiles
 		static char new_pool[element_size * Size] = {0};
 		assert(get_asset_type_size(Type) == game::DB_GetXAssetTypeSize(Type));
 
+		if (static_cast<size_t>(game::g_poolSize[Type]) > Size)
+		{
+			return static_cast<char*>(game::DB_XAssetPool[Type]);
+		}
+
 		std::memmove(new_pool, game::DB_XAssetPool[Type], game::g_poolSize[Type] * element_size);
 
 		game::DB_XAssetPool[Type] = new_pool;
@@ -132,7 +137,7 @@ namespace fastfiles
 	public:
 		void post_unpack() override
 		{
-			db_try_load_x_file_internal_hook.create(SELECT_VALUE(0x1401816F0, 0x1402741C0), &db_try_load_x_file_internal);
+			db_try_load_x_file_internal_hook.create(SELECT_VALUE(0x1401816F0, 0x1402CF7C0), &db_try_load_x_file_internal);
 
 			db_find_x_asset_header_hook.create(game::DB_FindXAssetHeader, db_find_x_asset_header_stub);
 			dvars::g_dump_scripts = game::Dvar_RegisterBool("g_dumpScripts", false, game::DVAR_FLAG_NONE, "Dump GSC scripts to binary format");
@@ -160,16 +165,16 @@ namespace fastfiles
 				}
 			});
 
-			reallocate_asset_pool<game::ASSET_TYPE_FONT, 48>();
+			reallocate_asset_pool<game::ASSET_TYPE_FONT, 128>();
 
 			if (!game::environment::is_sp())
 			{
 				const auto* xmodel_pool = reallocate_asset_pool<game::ASSET_TYPE_XMODEL, 8832>();
-				utils::hook::inject(0x14026FD63, xmodel_pool + 8);
-				utils::hook::inject(0x14026FDB3, xmodel_pool + 8);
-				utils::hook::inject(0x14026FFAC, xmodel_pool + 8);
-				utils::hook::inject(0x14027463C, xmodel_pool + 8);
-				utils::hook::inject(0x140274689, xmodel_pool + 8);
+				utils::hook::inject(0x1402CB833, xmodel_pool + 8);
+				utils::hook::inject(0x1402CB883, xmodel_pool + 8);
+				utils::hook::inject(0x1402CE457, xmodel_pool + 8);
+				utils::hook::inject(0x1402CFCC4, xmodel_pool + 8);
+				utils::hook::inject(0x1402CFD1A, xmodel_pool + 8);
 			}
 		}
 	};

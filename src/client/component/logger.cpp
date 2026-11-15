@@ -99,47 +99,47 @@ namespace logger
 		// nullsub_56
 		void nullsub_56()
 		{
-			utils::hook::call(0x1400D2572, print_warning);
-			utils::hook::call(0x1400D257E, print_warning);
-			utils::hook::call(0x1400D2586, print_warning);
-			utils::hook::call(0x1400D2592, print_warning);
+			utils::hook::call(0x14012AD02, print_warning);
+			utils::hook::call(0x14012AD0E, print_warning);
+			utils::hook::call(0x14012AD16, print_warning);
+			utils::hook::call(0x14012AD22, print_warning);
 
-			utils::hook::call(0x1400D2B7D, print_warning);
-			utils::hook::call(0x1400D2B89, print_warning);
-			utils::hook::call(0x1400D2B91, print_warning);
-			utils::hook::call(0x1400D2B9D, print_warning);
+			utils::hook::call(0x14012B17D, print_warning);
+			utils::hook::call(0x14012B189, print_warning);
+			utils::hook::call(0x14012B191, print_warning);
+			utils::hook::call(0x14012B19D, print_warning);
 
-			utils::hook::call(0x1400D78ED, print_warning);
-			utils::hook::call(0x1400D78F9, print_warning);
-			utils::hook::call(0x1400D7901, print_warning);
-			utils::hook::call(0x1400D790D, print_warning);
+			utils::hook::call(0x1401310AF, print_warning);
+			utils::hook::call(0x1401310BB, print_warning);
+			utils::hook::call(0x1401310C3, print_warning);
+			utils::hook::call(0x1401310CF, print_warning);
 
-			utils::hook::call(0x1400D84F8, print_warning);
-			utils::hook::call(0x1400D850C, print_warning);
+			utils::hook::call(0x140131D23, print_warning);
+			utils::hook::call(0x140131D37, print_warning);
 
-			utils::hook::call(0x1400D8C08, print_warning);
-			utils::hook::call(0x1400D8C28, print_warning);
-			utils::hook::call(0x1400D8C34, print_warning);
+			utils::hook::call(0x140132438, print_warning);
+			utils::hook::call(0x140132458, print_warning);
+			utils::hook::call(0x140132464, print_warning);
 
-			utils::hook::call(0x1400D8CD8, print_warning);
-			utils::hook::call(0x1400D8CF8, print_warning);
-			utils::hook::call(0x1400D8D04, print_warning);
-			utils::hook::call(0x1400D8D1D, print_warning);
+			utils::hook::call(0x1401324EE, print_warning);
+			utils::hook::call(0x140132528, print_warning);
+			utils::hook::call(0x140132534, print_warning);
+			utils::hook::call(0x140132548, print_warning);
 
-			utils::hook::call(0x1400DAE67, print_warning);
-			utils::hook::call(0x1400DB019, print_warning);
+			utils::hook::call(0x140134A88, print_warning);
+			utils::hook::call(0x140134CA1, print_warning);
 		}
 
 		// sub_1400E7420
 		void sub_1400E7420()
 		{
-			utils::hook::call(0x1400CEC1C, print_warning);
-			utils::hook::call(0x1400D218E, print_warning);
-			utils::hook::call(0x1400D2319, print_warning);
-			utils::hook::call(0x1400D65BC, print_dev);
-			utils::hook::call(0x1400D7C94, print_dev);
-			utils::hook::call(0x1400DAB6A, print_dev);
-			utils::hook::call(0x1400DB9BC, print_dev);
+			utils::hook::call(0x140126861, print_warning);
+			utils::hook::call(0x14012A83E, print_warning);
+			utils::hook::call(0x14012AACE, print_warning);
+			utils::hook::call(0x14012F9F8, print_dev);
+			utils::hook::call(0x140131474, print_dev);
+			utils::hook::call(0x14013471A, print_dev);
+			utils::hook::call(0x14013571C, print_dev);
 		}
 	}
 
@@ -154,12 +154,12 @@ namespace logger
 				sub_1400E7420();
 
 				// Make havok script's print function actually print
-				utils::hook::jump(0x140701A1C, print);
+				utils::hook::jump(0x140122D80, print);
 			}
 
 			if (!game::environment::is_sp())
 			{
-				utils::hook::call(0x1404D8543, print_com_error);
+				utils::hook::call(0x14053B8F3, print_com_error);
 			}
 
 			com_error_hook.create(game::Com_Error, com_error_stub);

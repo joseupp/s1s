@@ -100,6 +100,25 @@ namespace game_console
 			con.output_visible = con.output_visible == 0;
 		}
 
+		constexpr auto console_font_height = 42.0f;
+
+		float font_scale()
+		{
+			const auto* font = console_font;
+			return font && font->pixelHeight > 0 ? console_font_height / static_cast<float>(font->pixelHeight) : 1.0f;
+		}
+
+		float font_height()
+		{
+			const auto* font = console_font;
+			return font ? static_cast<float>(font->pixelHeight) * font_scale() : 0.0f;
+		}
+
+		float output_top()
+		{
+			return std::max(32.0f, font_height() + 20.0f);
+		}
+
 		void check_resize()
 		{
 			con.screen_min[0] = 6.0f;
@@ -109,7 +128,7 @@ namespace game_console
 
 			if (console_font)
 			{
-				con.font_height = console_font->pixelHeight;
+				con.font_height = static_cast<int>(font_height());
 				con.visible_line_count = static_cast<int>((con.screen_max[1] - con.screen_min[1] - (con.font_height * 2)
 					) -
 					24.0f) / con.font_height;
@@ -154,9 +173,9 @@ namespace game_console
 		void draw_input_text_and_over(const char* str, float* color)
 		{
 			game::R_AddCmdDrawText(str, 0x7FFFFFFF, console_font, con.globals.x,
-			                       con.globals.y + con.globals.font_height, 1,
-			                       1, 0, color, 0);
-			con.globals.x = game::R_TextWidth(str, 0, console_font) + con.globals.x + 6.0f;
+			                       con.globals.y + con.globals.font_height, font_scale(),
+			                       font_scale(), 0, color, 0);
+			con.globals.x = game::R_TextWidth(str, 0, console_font) * font_scale() + con.globals.x + 6.0f;
 		}
 
 		void draw_hint_box(const int lines, float* color, [[maybe_unused]] float offset_x = 0.0f,
@@ -173,25 +192,25 @@ namespace game_console
 		{
 			const auto _y = con.globals.font_height + con.globals.y + (con.globals.font_height * (line + 1)) + 15.0f;
 
-			game::R_AddCmdDrawText(text, 0x7FFFFFFF, console_font, con.globals.x + offset, _y, 1.0f, 1.0f, 0.0f, color,
+			game::R_AddCmdDrawText(text, 0x7FFFFFFF, console_font, con.globals.x + offset, _y, font_scale(), font_scale(), 0.0f, color,
 			                       0);
 		}
 
 		void draw_input()
 		{
-			con.globals.font_height = static_cast<float>(console_font->pixelHeight);
+			con.globals.font_height = font_height();
 			con.globals.x = con.screen_min[0] + 6.0f;
 			con.globals.y = con.screen_min[1] + 6.0f;
 			con.globals.left_x = con.screen_min[0] + 6.0f;
 
 			draw_input_box(1, dvars::con_inputBoxColor->current.vector);
-			draw_input_text_and_over("s1-mod: " VERSION ">", color_s1);
+			draw_input_text_and_over("S1_S_MP: " SHORTVERSION ">", color_s1);
 
 			con.globals.left_x = con.globals.x;
 			con.globals.auto_complete_choice[0] = 0;
 
 			game::R_AddCmdDrawTextWithCursor(con.buffer, 0x7FFFFFFF, console_font, con.globals.x,
-			                                 con.globals.y + con.globals.font_height, 1.0f, 1.0f, 0.0f, color_white, 0,
+			                                 con.globals.y + con.globals.font_height, font_scale(), font_scale(), 0.0f, color_white, 0,
 			                                 con.cursor, '|');
 
 			// check if using a prefixed '/' or not
@@ -308,7 +327,7 @@ namespace game_console
 
 			for (auto i = 0; i < con.visible_line_count; i++)
 			{
-				y = console_font->pixelHeight + y;
+				y = font_height() + y;
 
 				const auto index = i + con.display_line_offset;
 				if (index >= output.size())
@@ -316,7 +335,7 @@ namespace game_console
 					break;
 				}
 
-				game::R_AddCmdDrawText(output.at(index).data(), 0x7FFF, console_font, x, y + offset, 1.0f, 1.0f,
+				game::R_AddCmdDrawText(output.at(index).data(), 0x7FFF, console_font, x, y + offset, font_scale(), font_scale(),
 				                       0.0f, color_white, 0);
 			}
 		}
@@ -325,16 +344,16 @@ namespace game_console
 		{
 			con.output.access([](output_queue& output)
 			{
-				draw_box(con.screen_min[0], con.screen_min[1] + 32.0f, con.screen_max[0] - con.screen_min[0],
-				         (con.screen_max[1] - con.screen_min[1]) - 32.0f, dvars::con_outputWindowColor->current.vector);
+				draw_box(con.screen_min[0], con.screen_min[1] + output_top(), con.screen_max[0] - con.screen_min[0],
+				         (con.screen_max[1] - con.screen_min[1]) - output_top(), dvars::con_outputWindowColor->current.vector);
 
 				const auto x = con.screen_min[0] + 6.0f;
-				const auto y = (con.screen_min[1] + 32.0f) + 6.0f;
+				const auto y = (con.screen_min[1] + output_top()) + 6.0f;
 				const auto width = (con.screen_max[0] - con.screen_min[0]) - 12.0f;
-				const auto height = ((con.screen_max[1] - con.screen_min[1]) - 32.0f) - 12.0f;
+				const auto height = ((con.screen_max[1] - con.screen_min[1]) - output_top()) - 12.0f;
 
 				game::R_AddCmdDrawText(game::Dvar_FindVar("version")->current.string, 0x7FFFFFFF, console_font, x,
-				                       ((height - 12.0f) + y) + console_font->pixelHeight, 1.0f, 1.0f, 0.0f, color_s1,
+				                       ((height - 12.0f) + y) + font_height(), font_scale(), font_scale(), 0.0f, color_s1,
 				                       0);
 
 				draw_output_scrollbar(x, y, width, height, output);

@@ -18,6 +18,7 @@ namespace demonware
 		this->register_service<bdStats>();
 		this->register_service<bdStorage>();
 		this->register_service<bdTitleUtilities>();
+		this->register_service<bdBandwidthTest>();
 		this->register_service<bdProfiles>();
 		this->register_service<bdRichPresence>();
 		this->register_service<bdFacebook>();
@@ -164,6 +165,7 @@ namespace demonware
 		else
 		{
 			printf("[DW]: [lobby]: missing service '%s'\n", utils::string::va("%d", id));
+			dw_log(utils::string::va("[missing service %d] (%zu bytes): ", id, data.size()) + dw_hex(data));
 
 			// return no error
 			byte_buffer buffer(data);

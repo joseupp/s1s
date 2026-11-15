@@ -3,10 +3,15 @@
 #include "game/game.hpp"
 
 #include "scheduler.hpp"
+#include "startup_log.hpp"
 
 #include <utils/concurrency.hpp>
 #include <utils/hook.hpp>
 #include <utils/thread.hpp>
+#include <utils/string.hpp>
+
+#include <DbgHelp.h>
+#include <version.hpp>
 
 namespace scheduler
 {
@@ -104,8 +109,67 @@ namespace scheduler
 			execute(pipeline::server);
 		}
 
+		constexpr auto hang_timeout = 20s;
+		std::atomic<std::int64_t> last_main_frame{0};
+		bool hang_dumped = false;
+
+		std::int64_t now_ms()
+		{
+			return std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now().time_since_epoch()).count();
+		}
+
+		void write_hang_dump()
+		{
+			const auto type = MiniDumpIgnoreInaccessibleMemory
+				| MiniDumpWithHandleData
+				| MiniDumpScanMemory
+				| MiniDumpWithProcessThreadData
+				| MiniDumpWithFullMemoryInfo
+				| MiniDumpWithThreadInfo;
+
+			CreateDirectoryA("minidumps", nullptr);
+			const auto* file_name = utils::string::va("minidumps\\s1-mod_hang_%s_%u.dmp", SHORTVERSION,
+				static_cast<std::uint32_t>(std::time(nullptr)));
+
+			const auto file_handle = CreateFileA(file_name, GENERIC_WRITE | GENERIC_READ,
+				FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, CREATE_ALWAYS, NULL, nullptr);
+			if (file_handle == INVALID_HANDLE_VALUE)
+			{
+				return;
+			}
+
+			MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file_handle,
+				static_cast<MINIDUMP_TYPE>(type), nullptr, nullptr, nullptr);
+			CloseHandle(file_handle);
+
+			startup_log::write(utils::string::va("Cuelgue: el hilo principal lleva más de %lld s sin avanzar, volcado %s",
+				static_cast<long long>(hang_timeout.count()), file_name));
+		}
+
+		void check_hang()
+		{
+			const auto last = last_main_frame.load();
+			if (!last)
+			{
+				return;
+			}
+
+			const auto stalled = now_ms() - last > std::chrono::duration_cast<std::chrono::milliseconds>(hang_timeout).count();
+			if (!stalled)
+			{
+				hang_dumped = false;
+			}
+			else if (!hang_dumped)
+			{
+				hang_dumped = true;
+				write_hang_dump();
+			}
+		}
+
 		void main_frame_stub()
 		{
+			last_main_frame = now_ms();
 			execute(pipeline::main);
 			game::Com_Frame_Try_Block_Function();
 		}
@@ -170,6 +234,7 @@ namespace scheduler
 				while (!kill)
 				{
 					execute(pipeline::async);
+					check_hang();
 					std::this_thread::sleep_for(10ms);
 				}
 			});
@@ -177,10 +242,10 @@ namespace scheduler
 
 		void post_unpack() override
 		{
-			r_end_frame_hook.create(SELECT_VALUE(0x1404A3E20, 0x1405C25B0), r_end_frame_stub);
+			r_end_frame_hook.create(SELECT_VALUE(0x1404A3E20, 0x140629580), r_end_frame_stub);
 
-			utils::hook::call(SELECT_VALUE(0x1402F7DC2, 0x1403CEEE2), main_frame_stub);
-			utils::hook::call(SELECT_VALUE(0x140228647, 0x1402F8879), server_frame_stub);
+			utils::hook::call(SELECT_VALUE(0x1402F7DC2, 0x14042C5C2), main_frame_stub);
+			utils::hook::call(SELECT_VALUE(0x140228647, 0x14035375A), server_frame_stub);
 		}
 
 		void pre_destroy() override

@@ -176,11 +176,11 @@ namespace scripting
 		void post_unpack() override
 		{
 			// SP address is wrong, but should be ok
-			scr_load_level_hook.create(SELECT_VALUE(0x140005260, 0x140325B90), &scr_load_level_stub);
-			g_shutdown_game_hook.create(SELECT_VALUE(0x140228BA0, 0x1402F8C10), &g_shutdown_game_stub);
+			scr_load_level_hook.create(SELECT_VALUE(0x140005260, 0x1403805E0), &scr_load_level_stub);
+			g_shutdown_game_hook.create(SELECT_VALUE(0x140228BA0, 0x140353C10), &g_shutdown_game_stub);
 
-			scr_set_thread_position_hook.create(SELECT_VALUE(0x1403115E0, 0x1403EDB10), &scr_set_thread_position_stub);
-			process_script_hook.create(SELECT_VALUE(0x14031AB30, 0x1403F7300), &process_script_stub);
+			scr_set_thread_position_hook.create(SELECT_VALUE(0x1403115E0, 0x14044AEA0), &scr_set_thread_position_stub);
+			process_script_hook.create(SELECT_VALUE(0x14031AB30, 0x1404545A0), &process_script_stub);
 			sl_get_canonical_string_hook.create(game::SL_GetCanonicalString, &sl_get_canonical_string_stub);
 
 			scheduler::loop([]

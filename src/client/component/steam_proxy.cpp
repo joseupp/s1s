@@ -2,83 +2,22 @@
 #include "loader/component_loader.hpp"
 #include "scheduler.hpp"
 
-#include <utils/binary_resource.hpp>
-#include <utils/nt.hpp>
-#include <utils/string.hpp>
-
 #include "game/game.hpp"
 
 #include "steam/interface.hpp"
 #include "steam/steam.hpp"
 
+#include <utils/nt.hpp>
+#include <utils/string.hpp>
+#include <utils/cryptography.hpp>
+#include <utils/io.hpp>
+#include <utils/smbios.hpp>
+
 namespace steam_proxy
 {
 	namespace
 	{
-		enum class ownership_state
-		{
-			success,
-			unowned,
-			nosteam,
-			error,
-		};
-
-		ownership_state state_;
-
-		utils::binary_resource runner_file(RUNNER, "s1-mod-runner.exe");
-	}
-
-	class component final : public component_interface
-	{
-	public:
-		void post_load() override
-		{
-			if (game::environment::is_dedi())
-			{
-				return;
-			}
-
-			this->load_client();
-			this->clean_up_on_error();
-
-#ifndef DEV_BUILD
-			try
-			{
-				const std::string mod_name = "\xF0\x9F\x92\x8E" " s1-mod: ";
-				state_ = this->start_mod(mod_name + game::environment::get_string(), game::environment::is_sp() ? 209650 : 209660);
-			}
-			catch (const std::exception& ex)
-			{
-				state_ = ownership_state::error;
-				printf("Steam: %s\n", ex.what());
-			}
-#endif
-		}
-
-		void pre_destroy() override
-		{
-			if (this->steam_client_module_)
-			{
-				if (this->steam_pipe_)
-				{
-					if (this->global_user_)
-					{
-						this->steam_client_module_.invoke<void>("Steam_ReleaseUser", this->steam_pipe_, this->global_user_);
-					}
-
-					this->steam_client_module_.invoke<bool>("Steam_BReleaseSteamPipe", this->steam_pipe_);
-				}
-			}
-		}
-
-		const utils::nt::library& get_overlay_module() const
-		{
-			return steam_overlay_module_;
-		}
-
-	private:
 		utils::nt::library steam_client_module_{};
-		utils::nt::library steam_overlay_module_{};
 
 		steam::interface client_engine_{};
 		steam::interface client_user_{};
@@ -87,14 +26,63 @@ namespace steam_proxy
 		void* steam_pipe_ = nullptr;
 		void* global_user_ = nullptr;
 
-		void* load_client_engine() const
+		enum class ownership_state
 		{
-			if (!this->steam_client_module_) return nullptr;
+			success,
+			unowned,
+			nosteam,
+			error,
+		};
+
+		const char* license_path = "s1/players2/license.dat";
+
+		size_t get_app_id()
+		{
+			return game::environment::is_sp() ? 209650 : 209660;
+		}
+
+		bool is_steam_running()
+		{
+			HKEY key{};
+			if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
+			{
+				return false;
+			}
+
+			DWORD pid{};
+			DWORD size = sizeof(pid);
+			const auto result = RegQueryValueExA(key, "pid", nullptr, nullptr, reinterpret_cast<BYTE*>(&pid), &size);
+			RegCloseKey(key);
+			if (result != ERROR_SUCCESS || !pid)
+			{
+				return false;
+			}
+
+			if (utils::nt::is_wine())
+			{
+				return true;
+			}
+
+			const auto process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+			if (!process)
+			{
+				return false;
+			}
+
+			DWORD exit_code{};
+			const auto alive = GetExitCodeProcess(process, &exit_code) && exit_code == STILL_ACTIVE;
+			CloseHandle(process);
+			return alive;
+		}
+
+		void* load_client_engine()
+		{
+			if (!steam_client_module_) return nullptr;
 
 			for (auto i = 1; i < 1000; ++i)
 			{
 				const auto* name = utils::string::va("CLIENTENGINE_INTERFACE_VERSION%03i", i);
-				auto* const client_engine = this->steam_client_module_.invoke<void*>("CreateInterface", name, nullptr);
+				auto* const client_engine = steam_client_module_.invoke<void*>("CreateInterface", name, nullptr);
 				if (client_engine) return client_engine;
 			}
 
@@ -103,104 +91,174 @@ namespace steam_proxy
 
 		void load_client()
 		{
+			const auto app_id = get_app_id();
+			SetEnvironmentVariableA("SteamAppId", utils::string::va("%zu", app_id));
+			SetEnvironmentVariableA("SteamGameId", utils::string::va("%zu", app_id & 0xFFFFFF));
+
 			const std::filesystem::path steam_path = steam::SteamAPI_GetSteamInstallPath();
 			if (steam_path.empty()) return;
 
 			utils::nt::library::load(steam_path / "tier0_s64.dll");
 			utils::nt::library::load(steam_path / "vstdlib_s64.dll");
-			this->steam_overlay_module_ = utils::nt::library::load(steam_path / "gameoverlayrenderer64.dll");
-			this->steam_client_module_ = utils::nt::library::load(steam_path / "steamclient64.dll");
-			if (!this->steam_client_module_) return;
+			steam_client_module_ = utils::nt::library::load(steam_path / "steamclient64.dll");
+			if (!steam_client_module_) return;
 
-			this->client_engine_ = load_client_engine();
-			if (!this->client_engine_) return;
+			client_engine_ = load_client_engine();
+			if (!client_engine_) return;
 
-			this->steam_pipe_ = this->steam_client_module_.invoke<void*>("Steam_CreateSteamPipe");
-			this->global_user_ = this->steam_client_module_.invoke<void*>("Steam_ConnectToGlobalUser", this->steam_pipe_);
-			this->client_user_ = this->client_engine_.invoke<void*>(8, this->steam_pipe_, this->global_user_);
-			// GetIClientUser
-			this->client_utils_ = this->client_engine_.invoke<void*>(14, this->steam_pipe_); // GetIClientUtils
-		}
-
-		ownership_state start_mod(const std::string& title, const size_t app_id)
-		{
-			__try
-			{
-				return this->start_mod_unsafe(title, app_id);
-			}
-			__except (EXCEPTION_EXECUTE_HANDLER)
-			{
-				this->do_cleanup();
-				return ownership_state::error;
-			}
-		}
-
-		ownership_state start_mod_unsafe(const std::string& title, size_t app_id)
-		{
-			if (!this->client_utils_ || !this->client_user_)
-			{
-				return ownership_state::nosteam;
-			}
-
-			if (!this->client_user_.invoke<bool>("BIsSubscribedApp", app_id))
-			{
-#ifdef _DEBUG
-				app_id = 480; // Spacewar
-#else
-				return ownership_state::unowned;
-#endif
-			}
-
-			this->client_utils_.invoke<void>("SetAppIDForCurrentPipe", app_id, false);
-
-			char our_directory[MAX_PATH]{};
-			GetCurrentDirectoryA(sizeof(our_directory), our_directory);
-
-			const auto path = runner_file.get_extracted_file();
-			const auto* cmdline = utils::string::va("\"%s\" -proc %d", path.data(), GetCurrentProcessId());
-
-			steam::game_id game_id;
-			game_id.raw.type = 1; // k_EGameIDTypeGameMod
-			game_id.raw.app_id = app_id & 0xFFFFFF;
-
-			const auto* mod_id = "s1-mod";
-			game_id.raw.mod_id = *reinterpret_cast<const unsigned int*>(mod_id) | 0x80000000;
-
-			this->client_user_.invoke<bool>("SpawnProcess", path.data(), cmdline, our_directory,
-			                                &game_id.bits, title.data(), 0, 0, 0);
-
-			return ownership_state::success;
+			steam_pipe_ = steam_client_module_.invoke<void*>("Steam_CreateSteamPipe");
+			global_user_ = steam_client_module_.invoke<void*>("Steam_ConnectToGlobalUser", steam_pipe_);
+			client_user_ = client_engine_.invoke<void*>(8, steam_pipe_, global_user_); // GetIClientUser
+			client_utils_ = client_engine_.invoke<void*>(14, steam_pipe_); // GetIClientUtils
 		}
 
 		void do_cleanup()
 		{
-			this->client_engine_ = nullptr;
-			this->client_user_ = nullptr;
-			this->client_utils_ = nullptr;
+			client_engine_ = nullptr;
+			client_user_ = nullptr;
+			client_utils_ = nullptr;
 
-			this->steam_pipe_ = nullptr;
-			this->global_user_ = nullptr;
+			steam_pipe_ = nullptr;
+			global_user_ = nullptr;
+		}
 
-			this->steam_client_module_ = utils::nt::library{nullptr};
+		bool perform_cleanup_if_needed()
+		{
+			if (steam_client_module_
+				&& steam_pipe_
+				&& global_user_
+				&& steam_client_module_.invoke<bool>("Steam_BConnected", global_user_, steam_pipe_)
+				&& steam_client_module_.invoke<bool>("Steam_BLoggedOn", global_user_, steam_pipe_))
+			{
+				return false;
+			}
+
+			do_cleanup();
+			return true;
 		}
 
 		void clean_up_on_error()
 		{
-			scheduler::schedule([this]()
+			scheduler::schedule([]()
 			{
-				if (this->steam_client_module_
-					&& this->steam_pipe_
-					&& this->global_user_
-					&& this->steam_client_module_.invoke<bool>("Steam_BConnected", this->global_user_, this->steam_pipe_)
-					&& this->steam_client_module_.invoke<bool>("Steam_BLoggedOn", this->global_user_, this->steam_pipe_)
-				)
+				return perform_cleanup_if_needed() ? scheduler::cond_end : scheduler::cond_continue;
+			}, scheduler::pipeline::main);
+		}
+
+		std::string make_license(const size_t app_id)
+		{
+			return utils::cryptography::sha256::compute(
+				utils::string::va("s1-license|%zu|%s", app_id, utils::smbios::get_uuid().data()), true);
+		}
+
+		bool has_saved_license(const size_t app_id)
+		{
+			std::string data{};
+			return utils::io::read_file(license_path, &data) && data == make_license(app_id);
+		}
+
+		void save_license(const size_t app_id)
+		{
+			utils::io::write_file(license_path, make_license(app_id), false);
+		}
+
+		ownership_state start_mod_unsafe(const size_t app_id)
+		{
+			if (!client_utils_ || !client_user_)
+			{
+				return has_saved_license(app_id) ? ownership_state::success : ownership_state::nosteam;
+			}
+
+			if (!client_user_.invoke<bool>("BIsSubscribedApp", app_id))
+			{
+				std::remove(license_path);
+				return ownership_state::unowned;
+			}
+
+			save_license(app_id);
+			client_utils_.invoke<void>("SetAppIDForCurrentPipe", app_id, false);
+
+			return ownership_state::success;
+		}
+
+		ownership_state start_mod(const size_t app_id)
+		{
+			try
+			{
+				return start_mod_unsafe(app_id);
+			}
+			catch (const std::exception& e)
+			{
+				do_cleanup();
+				printf("Steam: %s\n", e.what());
+				return ownership_state::error;
+			}
+		}
+
+		[[noreturn]] void fail(const char* message)
+		{
+			do_cleanup();
+			printf("Steam: %s\n", message);
+
+			if (auto* const splash_window = FindWindowA("S1 Splash Screen", nullptr))
+			{
+				DWORD_PTR result{};
+				SendMessageTimeoutA(splash_window, WM_CLOSE, 0, 0, SMTO_ABORTIFHUNG, 1000, &result);
+			}
+
+			MessageBoxA(nullptr, message, "S1", MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+			TerminateProcess(GetCurrentProcess(), 1234);
+			std::abort();
+		}
+	}
+
+	class component final : public component_interface
+	{
+	public:
+		void post_load() override
+		{
+			if (game::environment::is_dedi() || !is_steam_running())
+			{
+				return;
+			}
+
+			load_client();
+			perform_cleanup_if_needed();
+		}
+
+		void post_unpack() override
+		{
+			if (game::environment::is_dedi())
+			{
+				return;
+			}
+
+			switch (start_mod(get_app_id()))
+			{
+			case ownership_state::nosteam:
+				fail("Steam must be running the first time to verify that you own the game!");
+			case ownership_state::unowned:
+				fail("You must own the game on Steam to play this mod!");
+			case ownership_state::error:
+				fail("Failed to verify ownership of the game, please try again!");
+			case ownership_state::success:
+				break;
+			}
+
+			clean_up_on_error();
+		}
+
+		void pre_destroy() override
+		{
+			if (steam_client_module_ && steam_pipe_)
+			{
+				if (global_user_)
 				{
-					return scheduler::cond_continue;
+					steam_client_module_.invoke<void>("Steam_ReleaseUser", steam_pipe_, global_user_);
 				}
 
-				this->do_cleanup();
-				return scheduler::cond_end;
-			});
+				steam_client_module_.invoke<bool>("Steam_BReleaseSteamPipe", steam_pipe_);
+			}
 		}
 	};
 }

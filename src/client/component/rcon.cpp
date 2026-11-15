@@ -49,9 +49,9 @@ namespace rcon
 				return;
 			}
 
-			if (*reinterpret_cast<std::int32_t*>(0x1417E1690) >= 5) //clientUIActive.connectionState >= CA_CONNECTED
+			if (*reinterpret_cast<std::int32_t*>(0x141BD6240) >= 5) //clientUIActive.connectionState >= CA_CONNECTED
 			{
-				const auto target = *reinterpret_cast<game::netadr_s*>(0x141C7A8FC);
+				const auto target = *reinterpret_cast<game::netadr_s*>(0x14206F4AC);
 				const auto buffer = password + " " + data;
 				network::send(target, "rcon", buffer);
 			}
@@ -203,4 +203,3 @@ namespace rcon
 	};
 }
 
-REGISTER_COMPONENT(rcon::component)

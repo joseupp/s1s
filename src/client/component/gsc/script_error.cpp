@@ -309,24 +309,24 @@ namespace gsc
 				return;
 			}
 
-			scr_emit_function_hook.create(0x1403ED900, &scr_emit_function_stub);
+			scr_emit_function_hook.create(0x14044AC90, &scr_emit_function_stub);
 
-			utils::hook::call(0x1403ED894, compile_error_stub); // LinkFile
-			utils::hook::call(0x1403ED8E8, compile_error_stub); // LinkFile
-			utils::hook::call(0x1403ED9DB, find_variable_stub); // Scr_EmitFunction
+			utils::hook::call(0x14044ABE3, compile_error_stub); // LinkFile
+			utils::hook::call(0x14044AC33, compile_error_stub); // LinkFile
+			utils::hook::call(0x14044AD6D, find_variable_stub); // Scr_EmitFunction
 
 			// Restore basic error messages for commonly used scr functions
-			utils::hook::jump(0x1403F8990, scr_get_object);
-			utils::hook::jump(0x1403F8510, scr_get_const_string);
-			utils::hook::jump(0x1403F82F0, scr_get_const_istring);
-			utils::hook::jump(0x140327870, scr_validate_localized_string_ref);
-			utils::hook::jump(0x1403F8EC0, scr_get_vector);
-			utils::hook::jump(0x1403F88D0, scr_get_int);
-			utils::hook::jump(0x1403F8820, scr_get_float);
+			utils::hook::jump(0x140455E70, scr_get_object);
+			utils::hook::jump(0x140455960, scr_get_const_string);
+			utils::hook::jump(0x140455730, scr_get_const_istring);
+			utils::hook::jump(0x140382220, scr_validate_localized_string_ref);
+			utils::hook::jump(0x140456350, scr_get_vector);
+			utils::hook::jump(0x140455DB0, scr_get_int);
+			utils::hook::jump(0x140455C70, scr_get_float);
 
-			utils::hook::jump(0x1403F8BA0, scr_get_pointer_type);
-			utils::hook::jump(0x1403F8D70, scr_get_type);
-			utils::hook::jump(0x1403F8DE0, scr_get_type_name);
+			utils::hook::jump(0x140456090, scr_get_pointer_type);
+			utils::hook::jump(0x1404561F0, scr_get_type);
+			utils::hook::jump(0x140456260, scr_get_type_name);
 		}
 
 		void pre_destroy() override

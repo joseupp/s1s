@@ -75,11 +75,11 @@ namespace party
 			perform_game_initialization();
 
 			// exit from virtuallobby
-			reinterpret_cast<void(*)()>(0x14020EB90)();
+			reinterpret_cast<void(*)()>(0x14026A3F0)();
 
 			// CL_ConnectFromParty
 			char session_info[0x100] = {};
-			reinterpret_cast<void(*)(int, char*, const game::netadr_s*, const char*, const char*)>(0x140209360)(
+			reinterpret_cast<void(*)(int, char*, const game::netadr_s*, const char*, const char*)>(0x140264B90)(
 				0, session_info, &target, mapname.data(), gametype.data());
 		}
 
@@ -113,7 +113,7 @@ namespace party
 			}
 
 			// This function either does Dvar_SetString or Dvar_RegisterString for the given dvar
-			reinterpret_cast<void(*)(const char*, const char*)>(0x1404C39B0)(dvar_name, string);
+			reinterpret_cast<void(*)(const char*, const char*)>(0x140525570)(dvar_name, string);
 		}
 
 		void disconnect_stub()
@@ -298,20 +298,19 @@ namespace party
 				return;
 			}
 
-			// hook disconnect command function
-			utils::hook::jump(0x14020A010, disconnect_stub);
+			utils::hook::jump(0x140265690, disconnect_stub);
 
 			// detour CL_Disconnect to clear motd
-			cl_disconnect_hook.create(0x140209EC0, cl_disconnect_stub);
+			cl_disconnect_hook.create(0x1402655C0, cl_disconnect_stub);
 
 			if (game::environment::is_mp())
 			{
 				// show custom drop reason
-				utils::hook::nop(0x140209D5C, 13);
-				utils::hook::jump(0x140209D5C, drop_reason_stub, true);
+				if (game::port_pending) utils::hook::nop(0x140209D5C, 13);
+				if (game::port_pending) utils::hook::jump(0x140209D5C, drop_reason_stub, true);
 			}
 			// enable custom kick reason in GScr_KickPlayer
-			utils::hook::set<uint8_t>(0x14032ED80, 0xEB);
+			if (game::port_pending) utils::hook::set<uint8_t>(0x14032ED80, 0xEB);
 
 			command::add("map", [](const command::params& argument)
 			{
@@ -329,10 +328,10 @@ namespace party
 				{
 					return;
 				}
-				*reinterpret_cast<int*>(0x1488692B0) = 1; // sv_map_restart
-				*reinterpret_cast<int*>(0x1488692B4) = 1; // sv_loadScripts
-				*reinterpret_cast<int*>(0x1488692B8) = 0; // sv_migrate
-				reinterpret_cast<void(*)(int)>(0x140437460)(0); // SV_CheckLoadGame
+				*reinterpret_cast<int*>(0x148CB1740) = 1; // sv_map_restart
+				*reinterpret_cast<int*>(0x148CB1744) = 1; // sv_loadScripts
+				*reinterpret_cast<int*>(0x148CB1748) = 0; // sv_migrate
+				reinterpret_cast<void(*)(int)>(0x140494850)(0); // SV_CheckLoadGame
 			});
 
 			command::add("fast_restart", []()
@@ -525,7 +524,7 @@ namespace party
 				printf("%s\n", message.data());
 			});
 
-			utils::hook::call(0x14048811C, didyouknow_stub); // allow custom didyouknow based on sv_motd
+			utils::hook::call(0x1404EB28E, didyouknow_stub); // allow custom didyouknow based on sv_motd
 
 			network::on("getInfo", [](const game::netadr_s& target, const std::string& data)
 			{

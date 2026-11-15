@@ -126,7 +126,7 @@ namespace demonware
 				buffer.write_uint32(uint32_t(this->objects_.size()));
 				if (!this->objects_.empty())
 				{
-					buffer.write_uint32(uint32_t(this->objects_.size()));
+					buffer.write_uint32(this->total_ ? this->total_ : uint32_t(this->objects_.size()));
 
 					for (auto& object : this->objects_)
 					{
@@ -155,10 +155,16 @@ namespace demonware
 			this->add(std::shared_ptr<bdTaskResult>(object));
 		}
 
+		void set_total(const uint32_t total)
+		{
+			this->total_ = total;
+		}
+
 	private:
 		uint8_t type_;
 		uint32_t error_;
 		remote_reply reply_;
+		uint32_t total_{};
 		std::vector<std::shared_ptr<bdTaskResult>> objects_;
 	};
 }

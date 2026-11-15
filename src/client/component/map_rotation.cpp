@@ -298,7 +298,7 @@ namespace map_rotation
 			command::add("map_rotate", &perform_map_rotation);
 
 			// Hook GScr_ExitLevel 
-			utils::hook::jump(0x14032E490, &trigger_map_rotation);
+			utils::hook::jump(0x140389960, &trigger_map_rotation);
 		}
 	};
 }

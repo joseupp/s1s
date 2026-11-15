@@ -70,7 +70,7 @@ namespace scripting
 	script_function get_function_by_index(const std::uint32_t index)
 	{
 		static const auto function_table = &gsc::func_table;
-		static const auto method_table = SELECT_VALUE(0x14966A670, 0x147DD2F50);
+		static const auto method_table = SELECT_VALUE(0x14966A670, 0x14821B530);
 
 		if (index < 0x1000)
 		{

@@ -18,7 +18,7 @@ namespace virtuallobby
 			const auto original = a.newLabel();
 
 			a.pushad64();
-			a.mov(rax, qword_ptr(0x147B753C0)); // virtualLobbyInFiringRange
+			a.mov(rax, qword_ptr(0x147FBD8A0)); // virtualLobbyInFiringRange
 			a.cmp(byte_ptr(rax, 0x10), 1);
 			a.je(original);
 			a.call_aligned(game::VirtualLobby_Loaded);
@@ -33,13 +33,16 @@ namespace virtuallobby
 			// original
 			a.bind(original);
 			a.popad64();
-			a.mov(rax, qword_ptr(0x140BA7180));
+			a.mov(rax, qword_ptr(0x140F28298));
 			a.jmp(ret);
 
 			a.bind(ret);
-			a.mov(ecx, dword_ptr(rsp, 0x78));
+			a.mov(rdx, 0x1418BAAC8);
+			a.mov(edx, dword_ptr(rdx));
+			a.mov(ecx, dword_ptr(rsp, 0xA8));
+			a.shr(edx, 0xE);
 			a.movss(xmm6, dword_ptr(rax, 0x10));
-			a.jmp(0x1401D5B0B);
+			a.jmp(0x140232841);
 		});
 
 		const auto get_fovscale_stub = utils::hook::assemble([](utils::hook::assembler& a)
@@ -48,7 +51,7 @@ namespace virtuallobby
 			const auto original = a.newLabel();
 
 			a.pushad64();
-			a.mov(rax, qword_ptr(0x147B753C0)); // virtualLobbyInFiringRange
+			a.mov(rax, qword_ptr(0x147FBD8A0)); // virtualLobbyInFiringRange
 			a.cmp(byte_ptr(rax, 0x10), 1);
 			a.je(original);
 			a.call_aligned(game::VirtualLobby_Loaded);
@@ -63,12 +66,12 @@ namespace virtuallobby
 			// original
 			a.bind(original);
 			a.popad64();
-			a.mov(rax, qword_ptr(0x140BA7188));
+			a.mov(rax, qword_ptr(0x140F282A0));
 			a.jmp(ret);
 
 			a.bind(ret);
-			a.mov(rcx, 0x1414C1700);
-			a.jmp(0x1401D5CB8);
+			a.mov(rcx, 0x1418BA500);
+			a.jmp(0x140232AB2);
 		});
 	}
 
@@ -85,11 +88,11 @@ namespace virtuallobby
 			virtualLobby_fov = game::Dvar_RegisterFloat("virtualLobby_fov", 40.0f, 1.0f, 170.0f, game::DVAR_FLAG_SAVED, "Field of view for the virtual lobby");
 			virtualLobby_fovscale = game::Dvar_RegisterFloat("virtualLobby_fovScale", 1.0f, 0.0f, 2.0f, game::DVAR_FLAG_SAVED, "Field of view scaled for the virtual lobby");
 
-			utils::hook::nop(0x1401D5AFB, 16);
-			utils::hook::jump(0x1401D5AFB, get_fov_stub, true);
+			utils::hook::nop(0x140232825, 28);
+			utils::hook::jump(0x140232825, get_fov_stub, true);
 
-			utils::hook::nop(0x1401D5CAA, 14);
-			utils::hook::jump(0x1401D5CAA, get_fovscale_stub, true);
+			utils::hook::nop(0x140232AA4, 14);
+			utils::hook::jump(0x140232AA4, get_fovscale_stub, true);
 		}
 	};
 }

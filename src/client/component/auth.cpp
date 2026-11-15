@@ -179,7 +179,7 @@ namespace auth
 				a.call_aligned(direct_connect);
 				a.popad64();
 
-				a.jmp(0x140442317);
+				a.jmp(0x14049FF9A);
 			});
 		}
 	}
@@ -202,20 +202,20 @@ namespace auth
 			// Patch steam id bit check
 			if (game::environment::is_sp())
 			{
-				utils::hook::jump(0x1404267F0, 0x140426846);
-				utils::hook::jump(0x14042760F, 0x140427650);
-				utils::hook::jump(0x140427AB4, 0x140427B02);
+				utils::hook::jump(0x140482AC0, 0x140482B16);
+				if (game::port_pending) utils::hook::jump(0x14042760F, 0x140427650);
+				if (game::port_pending) utils::hook::jump(0x140427AB4, 0x140427B02);
 			}
 			else
 			{
-				utils::hook::jump(0x140538920, 0x140538976);
-				utils::hook::jump(0x140009801, 0x140009B48);
-				utils::hook::jump(0x140009AEB, 0x140009B48);
-				utils::hook::jump(0x14053995F, 0x1405399A0);
-				utils::hook::jump(0x140539E70, 0x140539EB6);
+				utils::hook::jump(0x14059E8A6, 0x14059E928);
+				if (game::port_pending) utils::hook::jump(0x140009801, 0x140009B48);
+				if (game::port_pending) utils::hook::jump(0x140009AEB, 0x140009B48);
+				utils::hook::jump(0x14059EDDF, 0x14059EE56);
+				if (game::port_pending) utils::hook::jump(0x140539E70, 0x14059F41D);
 
-				utils::hook::jump(0x1404421F6, get_direct_connect_stub(), true);
-				utils::hook::call(0x140208C54, send_connect_data_stub);
+				if (game::port_pending) utils::hook::jump(0x1404421F6, get_direct_connect_stub(), true);
+				if (game::port_pending) utils::hook::call(0x140208C54, send_connect_data_stub);
 			}
 
 			command::add("guid", []

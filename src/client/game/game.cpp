@@ -30,6 +30,19 @@ namespace game
 		return !game::environment::is_sp() && *mp::virtualLobby_loaded == 1;
 	}
 
+	namespace hks
+	{
+		cclosure* cclosure_Create(lua_State* s, const lua_function function, const int num_upvalues,
+			const int internal_, const int profilerTreatClosureAsFunc)
+		{
+			hksi_lua_pushcclosure(s, function, num_upvalues, nullptr, internal_, profilerTreatClosureAsFunc);
+
+			const auto closure = s->m_apistack.top[-1].v.cClosure;
+			--s->m_apistack.top;
+			return closure;
+		}
+	}
+
 	namespace environment
 	{
 		launcher::mode mode = launcher::mode::none;

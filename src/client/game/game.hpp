@@ -9,6 +9,8 @@
 
 namespace game
 {
+	inline volatile bool port_pending = false;
+
 	namespace environment
 	{
 		launcher::mode get_mode();
@@ -71,3 +73,8 @@ namespace game
 }
 
 #include "symbols.hpp"
+
+namespace game::hks
+{
+	cclosure* cclosure_Create(lua_State* s, lua_function function, int num_upvalues, int internal_, int profilerTreatClosureAsFunc);
+}

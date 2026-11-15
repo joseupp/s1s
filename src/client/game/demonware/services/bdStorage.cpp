@@ -11,13 +11,6 @@
 
 namespace demonware
 {
-	namespace
-	{
-		std::string get_motd_text()
-		{
-			return "This is not a copy & pasted client";
-		}
-	}
 
 	bdStorage::bdStorage() : service(10, "bdStorage")
 	{
@@ -27,7 +20,7 @@ namespace demonware
 		this->register_task(12, &bdStorage::get_user_file);
 		this->register_task(13, &bdStorage::unk13);
 
-		this->map_publisher_resource_variant(".*\\motd-.*\\.txt", get_motd_text);
+		this->map_publisher_resource(".*\\motd-.*\\.txt", "dw/motd-english.txt", DW_MOTD);
 		this->map_publisher_resource("ffotd-.*\\.ff", "dw/ffotd-1.22.1.ff", DW_FASTFILE);
 		this->map_publisher_resource("playlists(_.+)?\\.aggr", "dw/playlists_tu22.aggr", DW_PLAYLISTS);
 		this->map_publisher_resource("social_[Tt][Uu][0-9]+\\.cfg", "dw/social_tu22.cfg", DW_SOCIAL_CONFIG);

@@ -41,7 +41,7 @@ namespace gsc
 
 		unsigned int scr_get_function_stub(const char** p_name, int* type)
 		{
-			const auto result = utils::hook::invoke<unsigned int>(0x1403318B0, p_name, type);
+			const auto result = utils::hook::invoke<unsigned int>(0x14038C0C0, p_name, type);
 
 			for (const auto& [name, func] : functions)
 			{
@@ -137,12 +137,12 @@ namespace gsc
 		{
 			if (!developer_script->current.enabled && !force_error_print)
 			{
-				utils::hook::invoke<void>(0x1404B6790, mark_pos);
+				utils::hook::invoke<void>(0x14051A240, mark_pos);
 				return;
 			}
 
 			console::warn("******* script runtime error ********\n");
-			const auto opcode_id = *reinterpret_cast<std::uint8_t*>(0x148806768);
+			const auto opcode_id = *reinterpret_cast<std::uint8_t*>(0x148C4ECE8);
 
 			const std::string error = gsc_error_msg.has_value() ? std::format(": {}", gsc_error_msg.value()) : std::string();
 
@@ -168,7 +168,7 @@ namespace gsc
 
 			print_callstack();
 			console::warn("************************************\n");
-			utils::hook::invoke<void>(0x1404B6790, mark_pos);
+			utils::hook::invoke<void>(0x14051A240, mark_pos);
 		}
 
 		void scr_register_function_stub(void* func, int type, unsigned int name)
@@ -252,11 +252,11 @@ namespace gsc
 			override_function("print", &scr_print);
 			override_function("println", &scr_print_ln);
 
-			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x1403115BC, 0x1403EDAEC), 0x1000); // Scr_RegisterFunction
+			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x1403115BC, 0x14044AE7C), 0x1000); // Scr_RegisterFunction
 
-			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x1403115C2 + 4, 0x1403EDAF2 + 4), RVA(&func_table)); // Scr_RegisterFunction
-			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x14031F097 + 3, 0x1403FB7F7 + 3), RVA(&func_table)); // VM_Execute_0
-			utils::hook::inject(SELECT_VALUE(0x140311964 + 3, 0x1403EDEE4 + 3), &func_table); // Scr_BeginLoadScripts
+			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x14037BC28 + 4, 0x14044AE82 + 4), RVA(&func_table)); // Scr_RegisterFunction
+			utils::hook::set<std::uint32_t>(SELECT_VALUE(0x14031F097 + 3, 0x140458ED7 + 4), RVA(&func_table)); // VM_Execute_0
+			utils::hook::inject(SELECT_VALUE(0x140311964 + 3, 0x14044B288 + 3), &func_table); // Scr_BeginLoadScripts
 
 			if (game::environment::is_sp())
 			{
@@ -265,12 +265,12 @@ namespace gsc
 
 			developer_script = game::Dvar_RegisterBool("developer_script", false, game::DVAR_FLAG_NONE, "Enable developer script comments");
 
-			utils::hook::nop(0x1403FB7F7 + 5, 2);
-			utils::hook::call(0x1403FB7F7, vm_call_builtin_function);
+			utils::hook::nop(0x140458ED7 + 5, 3);
+			utils::hook::call(0x140458ED7, vm_call_builtin_function);
 
-			utils::hook::call(0x1403FCAB0, vm_error_stub); // LargeLocalResetToMark
+			utils::hook::call(0x14045A221, vm_error_stub); // LargeLocalResetToMark
 
-			utils::hook::call(0x1403EDF1F, scr_get_function_stub);
+			utils::hook::call(0x14044B2AF, scr_get_function_stub);
 
 			override_function("assert", &assert_cmd);
 			override_function("assertex", &assert_ex_cmd);

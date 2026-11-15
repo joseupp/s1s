@@ -64,11 +64,11 @@ namespace discord
 				discord_presence.details = utils::string::va("%s on %s", gametype, map);
 
 				// get server host name
-				auto* const host_name = reinterpret_cast<char*>(0x141646CC4);
+				auto* const host_name = reinterpret_cast<char*>(0x141A3FAC4);
 				utils::string::strip(host_name, host_name, std::strlen(host_name) + 1);
 
 				// get number of clients in game
-				auto clients = reinterpret_cast<int*>(0x1414CC290);
+				auto clients = reinterpret_cast<int*>(0x1418C5090);
 				int clientsNum = *clients;
 				discord_presence.partySize = clientsNum;
 
@@ -163,5 +163,4 @@ namespace discord
 }
 
 #ifndef DEV_BUILD
-REGISTER_COMPONENT(discord::component)
 #endif

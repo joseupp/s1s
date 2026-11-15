@@ -45,7 +45,7 @@ namespace slowmotion
 				return;
 			}
 
-			utils::hook::jump(0x14030EF90, scr_cmd_set_slow_motion);
+			utils::hook::jump(0x140378730, scr_cmd_set_slow_motion);
 		}
 	};
 }

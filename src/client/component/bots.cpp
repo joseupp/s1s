@@ -5,10 +5,9 @@
 #include "command.hpp"
 #include "console.hpp"
 #include "filesystem.hpp"
-#include "network.hpp"
+#include "lobby_bots.hpp"
 #include "party.hpp"
 #include "scheduler.hpp"
-#include "server_list.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
@@ -76,11 +75,16 @@ namespace bots
 		}
 
 		utils::hook::detour get_bot_name_hook;
-		volatile bool bot_names_received = false;
 		std::vector<std::string> bot_names;
 
 		const char* get_random_bot_name()
 		{
+			if (const auto lobby_name = lobby_bots::take_pending_bot_name())
+			{
+				console::info("[lobby_bots] bot name %s\n", lobby_name->data());
+				return utils::string::va("%s", lobby_name->data());
+			}
+
 			if (bot_names.empty())
 			{
 				return get_bot_name_hook.invoke<const char*>();
@@ -90,11 +94,6 @@ namespace bots
 			const auto& name = bot_names.at(index);
 
 			return utils::string::va("%.*s", static_cast<int>(name.size()), name.data());
-		}
-
-		bool should_update_bot_names()
-		{
-			return !filesystem::exists("bots.txt");
 		}
 
 		void parse_bot_names_from_file()
@@ -119,18 +118,6 @@ namespace bots
 
 				entry = entry.substr(0, MAX_NAME_LENGTH - 1);
 				bot_names.emplace_back(entry);
-			}
-		}
-
-		void update_bot_names()
-		{
-			bot_names_received = false;
-
-			game::netadr_s master;
-			if (server_list::get_master_server(master))
-			{
-				console::info("Getting bots...\n");
-				network::send(master, "getbots");
 			}
 		}
 	}
@@ -167,29 +154,7 @@ namespace bots
 				}
 			});
 
-			if (should_update_bot_names())
-			{
-				scheduler::on_game_initialized([]() -> void
-				{
-					update_bot_names();
-					scheduler::loop(update_bot_names, scheduler::main, 1h);
-				}, scheduler::main);
-			}
-			else
-			{
-				parse_bot_names_from_file();
-			}
-
-			network::on("getbotsResponse", [](const game::netadr_s& target, const std::string_view& data)
-			{
-				game::netadr_s master{};
-				if (server_list::get_master_server(master) && !bot_names_received && target == master)
-				{
-					const std::string received_data{ data };
-					bot_names = utils::string::split(received_data, '\n');
-					bot_names_received = true;
-				}
-			});
+			parse_bot_names_from_file();
 		}
 	};
 }

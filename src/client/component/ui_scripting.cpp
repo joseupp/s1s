@@ -205,7 +205,7 @@ namespace ui_scripting
 
 			setup_functions();
 
-			lua["print"] = function(reinterpret_cast<game::hks::lua_function>(0x14007CB70));
+			lua["print"] = function(reinterpret_cast<game::hks::lua_function>(0x1400D8F40));
 			lua["table"]["unpack"] = lua["unpack"];
 			lua["luiglobals"] = lua;
 
@@ -283,7 +283,7 @@ namespace ui_scripting
 				return load_buffer(globals.raw_script_name, utils::io::read_file(globals.raw_script_name));
 			}
 
-			return utils::hook::invoke<int>(0x14009CA10, state, compiler_options, reader, reader_data, chunk_name);
+			return utils::hook::invoke<int>(0x1400F3790, state, compiler_options, reader, reader_data, chunk_name);
 		}
 
 		int main_handler(game::hks::lua_State* state)
@@ -343,18 +343,20 @@ namespace ui_scripting
 				return;
 			}
 
-			utils::hook::call(0x1400CB68B, db_find_x_asset_header_stub);
-			utils::hook::call(0x1400CB7D6, db_find_x_asset_header_stub);
-			utils::hook::call(0x1400CB861, hks_load_stub);
+			utils::hook::call(0x1401232CB, db_find_x_asset_header_stub);
+			utils::hook::call(0x140123400, db_find_x_asset_header_stub);
+			utils::hook::call(0x1401234C2, db_find_x_asset_header_stub);
+			utils::hook::call(0x14012344B, hks_load_stub);
+			utils::hook::call(0x140123509, hks_load_stub);
 
-			hks_package_require_hook.create(0x1400781D0, hks_package_require_stub);
-			hks_start_hook.create(0x1400E4E40, hks_start_stub);
-			hks_shutdown_hook.create(0x1400DB9A0, hks_shutdown_stub);
+			hks_package_require_hook.create(0x1400CFCD0, hks_package_require_stub);
+			hks_start_hook.create(0x14013E920, hks_start_stub);
+			hks_shutdown_hook.create(0x140135700, hks_shutdown_stub);
 
 			command::add("lui_restart", []
 			{
-				utils::hook::invoke<void>(0x1400DB9A0);
-				utils::hook::invoke<void>(0x1400E6730);
+				utils::hook::invoke<void>(0x140135700);
+				utils::hook::invoke<void>(0x140143B20);
 			});
 		}
 	};

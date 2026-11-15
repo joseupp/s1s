@@ -150,10 +150,10 @@ namespace arxan
 			// 140545F80 -> 140545EE0
 			// 14053CCF0 -> 14053CCC0 // dwGetLogonStatus
 
-			utils::hook::call(0x14053B5FE, 0x140545EE0); // some pump
-			utils::hook::call(0x1404D3D42, 0x140509410); // some other pump
-			utils::hook::jump(0x14053CCB0, 0x14053CCC0); // dwGetLogonStatus
-			utils::hook::call(0x14053CD04, 0x14053CCC0); // dwGetLogonStatus
+			utils::hook::call(0x1405A0B05, 0x1405AB350); // some pump
+			utils::hook::call(0x140536EBD, 0x14056E570); // some other pump
+			utils::hook::jump(0x1405A2540, 0x1405A2550); // dwGetLogonStatus
+			utils::hook::call(0x1405A2594, 0x1405A2550); // dwGetLogonStatus
 
 			//scheduler::on_game_initialized(remove_hardware_breakpoints, scheduler::pipeline::main);
 		}

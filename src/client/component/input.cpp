@@ -50,8 +50,8 @@ namespace input
 				return;
 			}
 
-			cl_char_event_hook.create(SELECT_VALUE(0x14013E7B0, 0x140206690), cl_char_event_stub);
-			cl_key_event_hook.create(SELECT_VALUE(0x14013EB20, 0x140206900), cl_key_event_stub);
+			cl_char_event_hook.create(SELECT_VALUE(0x14013E7B0, 0x140261DE0), cl_char_event_stub);
+			cl_key_event_hook.create(SELECT_VALUE(0x14013EB20, 0x140262030), cl_key_event_stub);
 		}
 	};
 }

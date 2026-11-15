@@ -69,8 +69,8 @@ namespace command
 			static std::string comand_line_buffer = GetCommandLineA();
 			auto* command_line = comand_line_buffer.data();
 
-			auto& com_num_console_lines = *reinterpret_cast<int*>(0x147B76504);
-			auto* com_console_lines = reinterpret_cast<char**>(0x147B76510);
+			auto& com_num_console_lines = *reinterpret_cast<int*>(0x147FBEAF4);
+			auto* com_console_lines = reinterpret_cast<char**>(0x147FBEB00);
 
 			auto inq = false;
 			com_console_lines[0] = command_line;
@@ -102,7 +102,7 @@ namespace command
 		void parse_commandline_stub()
 		{
 			parse_command_line();
-			reinterpret_cast<void(*)()>(0x1403CEE10)();
+			reinterpret_cast<void(*)()>(0x14042C490)();
 		}
 	}
 
@@ -111,8 +111,8 @@ namespace command
 		// parse the commandline if it's not parsed
 		parse_command_line();
 
-		auto& com_num_console_lines = *reinterpret_cast<int*>(0x147B76504);
-		auto* com_console_lines = reinterpret_cast<char**>(0x147B76510);
+		auto& com_num_console_lines = *reinterpret_cast<int*>(0x147FBEAF4);
+		auto* com_console_lines = reinterpret_cast<char**>(0x147FBEB00);
 
 		for (int i = 0; i < com_num_console_lines; i++)
 		{
@@ -276,7 +276,7 @@ namespace command
 			}
 			else
 			{
-				utils::hook::call(0x1403CDF1C, &parse_commandline_stub);
+				utils::hook::call(0x14042B6BD, &parse_commandline_stub);
 				add_commands_mp();
 			}
 
@@ -570,7 +570,7 @@ namespace command
 
 		static void add_commands_mp()
 		{
-			client_command_hook.create(0x1402E98F0, &client_command);
+			client_command_hook.create(0x140343C00, &client_command);
 
 			add_sv("god", [](game::mp::gentity_s* ent, const params_sv&)
 			{

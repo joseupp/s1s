@@ -96,7 +96,7 @@ namespace colors
 		                            const size_t unk, const size_t unk2)
 		{
 			// CL_GetClientName (CL_GetClientNameAndClantag?)
-			const auto result = reinterpret_cast<size_t(*)(int, int, char*, int, size_t, size_t)>(0x140213E60)(
+			const auto result = reinterpret_cast<size_t(*)(int, int, char*, int, size_t, size_t)>(0x14026F310)(
 				local_client_num, index, buf, size, unk, unk2);
 
 			utils::string::strip(buf, buf, static_cast<size_t>(size));
@@ -110,11 +110,11 @@ namespace colors
 
 			if (index == '8')
 			{
-				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD978, 0x14D8594C4));
+				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD978, 0x14D8587C4));
 			}
 			else if (index == '9')
 			{
-				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD97C, 0x14D8594C8));
+				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD97C, 0x14D8587C8));
 			}
 			else if (index == ':')
 			{
@@ -122,7 +122,7 @@ namespace colors
 			}
 			else if (index == ';')
 			{
-				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD984, 0x14D8594D0));
+				*color = *reinterpret_cast<DWORD*>(SELECT_VALUE(0x14CEDD984, 0x14D8587D0));
 			}
 			else if (index == '<')
 			{
@@ -148,17 +148,17 @@ namespace colors
 			if (!game::environment::is_sp())
 			{
 				// allows colored name in-game
-				utils::hook::jump(0x1404C9510, com_clean_name_stub);
+				utils::hook::jump(0x14052BA40, com_clean_name_stub);
 
 				// don't apply colors to overhead names
-				utils::hook::call(0x1401891B0, get_client_name_stub);
+				if (game::port_pending) utils::hook::call(0x1401891B0, get_client_name_stub);
 
 				// patch I_CleanStr
-				utils::hook::jump(0x1404C99A0, i_clean_str_stub);
+				utils::hook::jump(0x14052BEB0, i_clean_str_stub);
 			}
 
 			// force new colors
-			utils::hook::jump(SELECT_VALUE(0x1404D3A20, 0x1405F2B90), rb_lookup_color_stub);
+			if (game::port_pending) utils::hook::jump(SELECT_VALUE(0x1404D3A20, 0x1405F2B90), rb_lookup_color_stub);
 
 			// add colors
 			add(0, 0, 0); // 0  - Black

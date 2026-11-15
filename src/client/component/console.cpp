@@ -7,6 +7,7 @@
 #include "game_console.hpp"
 #include "rcon.hpp"
 #include "scheduler.hpp"
+#include "startup_log.hpp"
 
 #include <utils/concurrency.hpp>
 #include <utils/hook.hpp>
@@ -126,7 +127,7 @@ namespace console
 		void post_unpack() override
 		{
 			// Redirect input (]command)
-			utils::hook::jump(SELECT_VALUE(0x14038F3E0, 0x1404D9200), append_text);
+			utils::hook::jump(SELECT_VALUE(0x14038F3E0, 0x14053C580), append_text);
 
 			utils::hook::jump(printf, print_stub);
 
@@ -220,7 +221,7 @@ namespace console
 
 	HWND get_window()
 	{
-		return *reinterpret_cast<HWND*>((SELECT_VALUE(0x14A9F6070, 0x14B5B94C0)));
+		return *reinterpret_cast<HWND*>((SELECT_VALUE(0x14A9F6070, 0x14B5B8720)));
 	}
 
 	void set_title(std::string title)
@@ -242,7 +243,7 @@ namespace console
 
 		SetWindowPos(get_window(), nullptr, rect.left, rect.top, width, height, 0);
 
-		auto* const logo_window = *reinterpret_cast<HWND*>(SELECT_VALUE(0x14A9F6080, 0x14B5B94D0));
+		auto* const logo_window = *reinterpret_cast<HWND*>(SELECT_VALUE(0x14A9F6080, 0x14B5B8730));
 		SetWindowPos(logo_window, nullptr, 5, 5, width - 25, 60, 0);
 	}
 
@@ -253,8 +254,9 @@ namespace console
 		const auto result = format(&ap, fmt);
 		va_end(ap);
 
+		startup_log::write(result);
 		dispatch_message(type, result);
 	}
 }
 
-REGISTER_COMPONENT(console::component)
+//REGISTER_COMPONENT(console::component)

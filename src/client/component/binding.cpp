@@ -124,13 +124,13 @@ namespace binding
 			}
 
 			// write all bindings to config file
-			utils::hook::call(SELECT_VALUE(0x14013F90B, 0x1402081CB), key_write_bindings_to_buffer_stub);
+			if (game::port_pending) utils::hook::call(SELECT_VALUE(0x14013F90B, 0x1402081CB), key_write_bindings_to_buffer_stub);
 
 			// links a custom command to an index
-			utils::hook::jump(SELECT_VALUE(0x1402EE5A0, 0x1403AFB50), key_get_binding_for_cmd_stub);
+			utils::hook::jump(SELECT_VALUE(0x1402EE5A0, 0x14040CB30), key_get_binding_for_cmd_stub);
 
 			// execute custom binds
-			cl_execute_key_hook.create(SELECT_VALUE(0x14013B110, 0x140202BE0), &cl_execute_key_stub);
+			cl_execute_key_hook.create(SELECT_VALUE(0x14013B110, 0x14025E300), &cl_execute_key_stub);
 		}
 	};
 }

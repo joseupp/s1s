@@ -102,11 +102,11 @@ namespace dvar_cheats
 		// if we get here, we are non-zero source and CAN set values
 		a.bind(can_set_value);
 		a.popad64(); // if I do this before the jz it won't work. for some reason the popad64 is affecting the ZR flag
-		a.jmp(0x1404C3AAE);
+		a.jmp(0x14052565D);
 
 		// if we get here, we are zero source and ignore flags
 		a.bind(zero_source);
-		a.jmp(0x1404C3AF4);
+		a.jmp(0x1405256AD);
 	});
 
 	void cg_set_client_dvar_from_server(const int local_client_num, void* cg, const char* dvar_id, const char* value)
@@ -166,13 +166,13 @@ namespace dvar_cheats
 		{
 			if (game::environment::is_sp()) return;
 
-			utils::hook::nop(0x1404C3A93, 4); // let our stub handle zero-source sets
-			utils::hook::jump(0x1404C3A9A, dvar_flag_checks_stub, true); // check extra dvar flags when setting values
+			if (game::port_pending) utils::hook::nop(0x1404C3A93, 4); // let our stub handle zero-source sets
+			if (game::port_pending) utils::hook::jump(0x1404C3A9A, dvar_flag_checks_stub, true); // check extra dvar flags when setting values
 
-			utils::hook::nop(0x1402E2E03, 5); // remove error in PlayerCmd_SetClientDvar if setting a non-network dvar
+			if (game::port_pending) utils::hook::nop(0x1402E2E03, 5); // remove error in PlayerCmd_SetClientDvar if setting a non-network dvar
 			// don't check flags on the dvars, send any existing dvar instead
-			utils::hook::jump(0x1402E2E4A, player_cmd_set_client_dvar, true); // send non-network dvars as string
-			utils::hook::call(0x1401BB782, cg_set_client_dvar_from_server);
+			if (game::port_pending) utils::hook::jump(0x1402E2E4A, player_cmd_set_client_dvar, true); // send non-network dvars as string
+			utils::hook::call(0x14021842C, cg_set_client_dvar_from_server);
 			// check for dvars being sent as string before parsing ids
 
 #ifdef _DEBUG

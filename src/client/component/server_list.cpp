@@ -303,9 +303,9 @@ namespace server_list
 		return true;
 	}
 
-	bool get_master_server(game::netadr_s& address)
+	bool get_master_server(game::netadr_s&)
 	{
-		return game::NET_StringToAdr("server.alterware.dev:20810", &address);
+		return false;
 	}
 
 	void handle_info_response(const game::netadr_s& address, const utils::info_string& info)
@@ -373,13 +373,13 @@ namespace server_list
 			if (!game::environment::is_mp()) return;
 
 			// replace UI_RunMenuScript call in LUI_CoD_LuaCall_RefreshServerList to our refresh_servers
-			utils::hook::call(0x1400F5AA1, &refresh_server_list);
-			utils::hook::call(0x1400F5F26, &join_server);
-			utils::hook::nop(0x1400F5F45, 5);
+			if (game::port_pending) utils::hook::call(0x1400F5AA1, &refresh_server_list);
+			if (game::port_pending) utils::hook::call(0x1400F5F26, &join_server);
+			if (game::port_pending) utils::hook::nop(0x1400F5F45, 5);
 
 			// do feeder stuff
-			utils::hook::call(0x1400F5B55, &ui_feeder_count);
-			utils::hook::call(0x1400F5D35, &ui_feeder_item_text);
+			if (game::port_pending) utils::hook::call(0x1400F5B55, &ui_feeder_count);
+			if (game::port_pending) utils::hook::call(0x1400F5D35, &ui_feeder_item_text);
 
 			scheduler::loop(do_frame_work, scheduler::pipeline::main);
 

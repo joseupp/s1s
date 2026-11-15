@@ -1,6 +1,55 @@
 #include <std_include.hpp>
 #include "component_loader.hpp"
 
+#include "component/startup_log.hpp"
+
+#include <utils/io.hpp>
+#include <utils/string.hpp>
+
+#include <typeinfo>
+
+namespace
+{
+	std::vector<std::string> read_skip_list()
+	{
+		std::vector<std::string> list{};
+		std::string data{};
+		if (!utils::io::read_file("port_skip.txt", &data))
+		{
+			return list;
+		}
+
+		for (auto& line : utils::string::split(data, '\n'))
+		{
+			while (!line.empty() && (line.back() == '\r' || line.back() == ' '))
+			{
+				line.pop_back();
+			}
+
+			if (!line.empty() && line[0] != '#')
+			{
+				list.push_back(line);
+			}
+		}
+
+		return list;
+	}
+
+	LONG WINAPI log_exception(PEXCEPTION_POINTERS info)
+	{
+		static auto count = 0;
+		const auto code = info->ExceptionRecord->ExceptionCode;
+		if (code >= 0xC0000000 && code != 0xC0000008 && count < 20)
+		{
+			++count;
+			startup_log::write(utils::string::va("excepción 0x%08X en 0x%llX", code,
+				reinterpret_cast<unsigned long long>(info->ExceptionRecord->ExceptionAddress)));
+		}
+
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+}
+
 void component_loader::register_component(std::unique_ptr<component_interface>&& component_)
 {
 	get_components().push_back(std::move(component_));
@@ -56,10 +105,43 @@ void component_loader::post_unpack()
 	if (handled) return;
 	handled = true;
 
+	const auto skip_list = read_skip_list();
+	auto* const exception_logger = AddVectoredExceptionHandler(1, log_exception);
+
 	for (const auto& component_ : get_components())
 	{
-		component_->post_unpack();
+		const std::string name = typeid(*component_).name();
+
+		auto skipped = false;
+		for (const auto& entry : skip_list)
+		{
+			if (name.find(entry) != std::string::npos)
+			{
+				skipped = true;
+				break;
+			}
+		}
+
+		if (skipped)
+		{
+			startup_log::write("post_unpack omitido: " + name);
+			continue;
+		}
+
+		startup_log::write("post_unpack: " + name);
+
+		try
+		{
+			component_->post_unpack();
+		}
+		catch (const std::exception& e)
+		{
+			startup_log::write("ERROR en post_unpack de " + name + ": " + e.what());
+		}
 	}
+
+	startup_log::write("post_unpack terminado");
+	RemoveVectoredExceptionHandler(exception_logger);
 }
 
 void component_loader::pre_destroy()

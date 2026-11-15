@@ -1,1 +1,19 @@
-Welcome to s1-mod. This is not a copy & pasted project.
+Bienvenido al Multijugador de Call of Duty®: Advanced Warfare.
+
+S1s es una modificacion de S1-mod para poder jugar solo contra bots,podras subir de nivel como en el multijugador online todos los modos de juego.
+
+Se han habilitado los suministros y la tienda para ademas poder comprar suministros avanzados con la moneda que se gana al ir jugando partidas.
+
+* Fov independiente de arma y mundo hasta 120.
+* Bots como jugadores se unen a la lobby.
+* Modifica el modo de juego, las opciones, el mapa y el equipo en la sala publica.
+* Los duplicados de los suministros se convierten en CoD Points.
+* Opcion en el menu de sonido para silenciar el sonido de las medallas en la partida.
+* Solo offline.
+* Compatible con la ultima version de Steam.
+
+Esta activado de forma permanente la doble XP en niveles y armas.
+
+Dedicado a todos los que nos gusta jugar offline.
+
+mod realizado por joseupp.

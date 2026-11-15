@@ -26,7 +26,7 @@ namespace gameplay
 		{
 			if (dvars::g_playerCollision->current.enabled)
 			{
-				utils::hook::invoke<void>(0x1403AB1C0,
+				utils::hook::invoke<void>(0x140408390,
 					results, start, end, bounds, capsule, contents, origin, angles); // CM_TransformedCapsuleTrace
 			}
 		}
@@ -95,7 +95,7 @@ namespace gameplay
 			a.movzx(eax, word_ptr(rbx, 0x3C));
 			a.add(eax, dword_ptr(rbx, 0x48));
 
-			a.jmp(0x1402D6A9C);
+			a.jmp(0x140331280);
 		});
 
 		const auto jump_push_off_ladder = utils::hook::assemble([](utils::hook::assembler& a)
@@ -119,7 +119,7 @@ namespace gameplay
 		void pm_player_trace_stub(game::pmove_t* pm, game::trace_t* results, const float* start,
 			const float* end, const game::Bounds* bounds, int pass_entity_num, int content_mask)
 		{
-			utils::hook::invoke<void>(0x14014A420, pm, results, start, end, bounds, pass_entity_num, content_mask);
+			utils::hook::invoke<void>(0x1401A5040, pm, results, start, end, bounds, pass_entity_num, content_mask);
 
 			if (dvars::g_elevators->current.enabled)
 			{
@@ -146,59 +146,62 @@ namespace gameplay
 		{
 			dvars::player_sustainAmmo = game::Dvar_RegisterBool("player_sustainAmmo", false,
 				game::DVAR_FLAG_REPLICATED, "Firing weapon will not decrease clip ammo");
-			pm_weapon_use_ammo_hook.create(SELECT_VALUE(0x1403DD050, 0x140162B20), &pm_weapon_use_ammo_stub);
+			pm_weapon_use_ammo_hook.create(SELECT_VALUE(0x1403DD050, 0x1401CA340), &pm_weapon_use_ammo_stub);
 
 			if (game::environment::is_sp()) return;
+
+			game::Dvar_RegisterBool("snd_medalSoundDisabled", false, game::DVAR_FLAG_SAVED,
+				"Disable the sound of in-game medals");
 
 			// Implement player ejection dvar
 			dvars::g_playerEjection = game::Dvar_RegisterBool("g_playerEjection", true, game::DVAR_FLAG_REPLICATED,
 			                                                  "Flag whether player ejection is on or off");
-			utils::hook::call(0x1402D5E4A, stuck_in_client_stub);
+			if (game::port_pending) utils::hook::call(0x1403306BA, stuck_in_client_stub);
 
 			// Implement player collision dvar
 			dvars::g_playerCollision = game::Dvar_RegisterBool("g_playerCollision", true, game::DVAR_FLAG_REPLICATED,
 			                                                   "Flag whether player collision is on or off");
-			utils::hook::call(0x1404563DA, cm_transformed_capsule_trace_stub); // SV_ClipMoveToEntity
-			utils::hook::call(0x1401F7F8F, cm_transformed_capsule_trace_stub); // CG_ClipMoveToEntity
+			if (game::port_pending) utils::hook::call(0x1404563DA, cm_transformed_capsule_trace_stub); // SV_ClipMoveToEntity
+			if (game::port_pending) utils::hook::call(0x1401F7F8F, cm_transformed_capsule_trace_stub); // CG_ClipMoveToEntity
 
 			// Implement bouncing dvar
-			utils::hook::jump(0x14014DF91, pm_bouncing_stub_mp, true);
+			if (game::port_pending) utils::hook::jump(0x14014DF91, pm_bouncing_stub_mp, true);
 			dvars::pm_bouncing = game::Dvar_RegisterBool("pm_bouncing", false,
 			                                             game::DVAR_FLAG_REPLICATED, "Enable bouncing");
 
 			// Change jump_slowdownEnable dvar flags to just "replicated"
-			utils::hook::set<uint8_t>(0x140135992, game::DVAR_FLAG_REPLICATED);
+			if (game::port_pending) utils::hook::set<uint8_t>(0x140135992, game::DVAR_FLAG_REPLICATED);
 
 			// Choosing the following min/max because the game would truncate larger values
 			dvars::g_gravity = game::Dvar_RegisterInt("g_gravity", 800, std::numeric_limits<short>::min(),
 				std::numeric_limits<short>::max(), game::DVAR_FLAG_REPLICATED, "Gravity in inches per second per second");
-			utils::hook::jump(0x1402D5A5D, client_end_frame_stub, true);
-			utils::hook::nop(0x1402D5A69, 1); // Nop skipped opcode
+			if (game::port_pending) utils::hook::jump(0x1402D5A5D, client_end_frame_stub, true);
+			if (game::port_pending) utils::hook::nop(0x1402D5A69, 1); // Nop skipped opcode
 
 			// Choosing the following min/max because the game would truncate larger values
 			dvars::g_speed = game::Dvar_RegisterInt("g_speed", 190,
 				std::numeric_limits<short>::min(), std::numeric_limits<short>::max(), game::DVAR_FLAG_REPLICATED, "Player speed");
-			utils::hook::jump(0x1402D6A8C, client_think_real_stub, true);
-			utils::hook::nop(0x1402D6A98, 4); // Nop skipped opcodes
+			if (game::port_pending) utils::hook::jump(0x1402D6A8C, client_think_real_stub, true);
+			if (game::port_pending) utils::hook::nop(0x1402D6A98, 4); // Nop skipped opcodes
 
 			dvars::jump_height = game::Dvar_RegisterFloat("jump_height", 39.0f,
 				0.0f, 1000.0f, game::DVAR_FLAG_REPLICATED, "The maximum height of a player's jump");
-			utils::hook::call(0x1401352FF, jump_start_stub);
+			if (game::port_pending) utils::hook::call(0x1401352FF, jump_start_stub);
 
 			dvars::jump_ladderPushVel = game::Dvar_RegisterFloat("jump_ladderPushVel", 128.0f,
 				0.0f, 1024.0f, game::DVAR_FLAG_REPLICATED, "The velocity of a jump off of a ladder");
-			utils::hook::jump(0x1401358B3, jump_push_off_ladder, true);
-			utils::hook::nop(0x1401358BF, 4); // Nop skipped opcodes
+			if (game::port_pending) utils::hook::jump(0x1401358B3, jump_push_off_ladder, true);
+			if (game::port_pending) utils::hook::nop(0x1401358BF, 4); // Nop skipped opcodes
 
 			dvars::g_elevators = game::Dvar_RegisterBool("g_elevators", false,
 				game::DVAR_FLAG_REPLICATED, "Enable elevators");
-			utils::hook::call(0x140146134, pm_player_trace_stub);
-			utils::hook::call(0x14014619B, pm_player_trace_stub);
+			if (game::port_pending) utils::hook::call(0x140146134, pm_player_trace_stub);
+			if (game::port_pending) utils::hook::call(0x14014619B, pm_player_trace_stub);
 
 			// Allow player to stand from prone/ducked
-			utils::hook::call(0x140142AF6, pm_trace_stub);
-			utils::hook::call(0x140142A1B, pm_trace_stub);
-			utils::hook::call(0x14014298D, pm_trace_stub);
+			if (game::port_pending) utils::hook::call(0x140142AF6, pm_trace_stub);
+			if (game::port_pending) utils::hook::call(0x140142A1B, pm_trace_stub);
+			if (game::port_pending) utils::hook::call(0x14014298D, pm_trace_stub);
 		}
 	};
 }

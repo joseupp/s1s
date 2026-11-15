@@ -51,7 +51,7 @@ namespace security
 				return;
 			}
 
-			utils::hook::invoke<void>(0x14043AA90, client, msg);
+			utils::hook::invoke<void>(0x140497F90, client, msg);
 		}
 	}
 
@@ -63,13 +63,13 @@ namespace security
 			if (game::environment::is_sp()) return;
 
 			// Patch vulnerability in PlayerCards_SetCachedPlayerData
-			utils::hook::call(0x1401BB909, set_cached_playerdata_stub);
+			if (game::port_pending) utils::hook::call(0x140219271, set_cached_playerdata_stub);
 
 			// Patch entity overflow
-			utils::hook::jump(0x14044DE3A, assemble(remap_cached_entities_stub), true);
+			if (game::port_pending) utils::hook::jump(0x14044DE3A, assemble(remap_cached_entities_stub), true);
 
 			// It is possible to make the server hang if left unchecked
-			utils::hook::call(0x140443051, sv_execute_client_message_stub);
+			if (game::port_pending) utils::hook::call(0x140443051, sv_execute_client_message_stub);
 		}
 	};
 }
